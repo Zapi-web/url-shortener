@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -33,6 +34,8 @@ func (d *Database) Set(ctx context.Context, key, value string) error {
 		return fmt.Errorf("failed to set a key-value in database: %w", err)
 	}
 
+	slog.Debug("key saved", "key", key)
+
 	return nil
 }
 
@@ -42,6 +45,8 @@ func (d *Database) Get(ctx context.Context, key string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get a value from a db: %w", err)
 	}
+
+	slog.Debug("value getted", "key", key, "value", val)
 
 	return val, nil
 }

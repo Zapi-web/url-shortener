@@ -2,38 +2,38 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"os"
 
-	"github.com/redis/go-redis/v9"
+	"github.com/Zapi-web/url-shortener/internal/logger"
+	"github.com/Zapi-web/url-shortener/internal/storage/redis"
 )
 
-var ctx = context.Background()
-
 func main() {
+	ctx := context.Background()
 	addr := os.Getenv("REDIS_ADDR")
 
 	if addr == "" {
 		addr = "localhost:6379"
 	}
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: "",
-		DB:       0,
-		Protocol: 2,
-	})
-	defer rdb.Close()
+	logLvl := os.Getenv("LOG_LEVEL")
+	slog.SetDefault(logger.NewLogger(logLvl))
+	slog.Info("Logger initialized", "level", logLvl)
 
-	err := rdb.Set(ctx, "Hello", "World", 0).Err()
+	db := redis.NewDatabase(ctx, addr)
+	slog.Info("Database initialized")
+
+	err := db.Set(ctx, "Hello", "World")
 	if err != nil {
-		panic(err)
+		slog.Error("Failed to set a key and value in db", "err", err)
+		return
 	}
 
-	val, err := rdb.Get(ctx, "Hello").Result()
-
+	val, err := db.Get(ctx, "Hello")
 	if err != nil {
-		panic(err)
+		slog.Error("Failed to get a value", "err", err)
 	}
-	fmt.Println("Hello", val)
+
+	slog.Info("test value", "val", val)
 }
