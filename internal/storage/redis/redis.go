@@ -22,8 +22,6 @@ func NewDatabase(ctx context.Context, addr string) *Database {
 		Protocol: 2,
 	})
 
-	ctx = context.Background()
-
 	return &d
 }
 
@@ -49,4 +47,8 @@ func (d *Database) Get(ctx context.Context, key string) (string, error) {
 	slog.Debug("value getted", "key", key, "value", val)
 
 	return val, nil
+}
+
+func (d *Database) Close() {
+	d.rdb.Close()
 }

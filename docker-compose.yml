@@ -2,14 +2,14 @@ services:
   go:
     build: .
     ports:
-      - "8080:8080"
+      - "8282:8282"
     environment:
       - REDIS_ADDR=db:6379
 
   db:
     image: redis:8.6-alpine
     volumes:
-      - redis_data:/var/lib/redis/data
+      - redis_data:/data
 
 volumes:
   redis_data:
