@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func randomKey() (string, error) {
+func RandomKey() (string, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
 	if err != nil {
