@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/get"
 	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/save"
 	"github.com/Zapi-web/url-shortener/internal/logger"
 	"github.com/Zapi-web/url-shortener/internal/storage/redis"
@@ -35,6 +36,7 @@ func main() {
 	slog.Info("Database initialized")
 
 	r.Post("/save", save.New(db))
+	r.Get("/{short_url:.{22}==}", get.GetNew(db))
 
 	slog.Info("Starting server", "addr", addr, "port", port)
 
