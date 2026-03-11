@@ -50,7 +50,7 @@ func (d *Database) Get(ctx context.Context, key string) (string, error) {
 	val, err := d.rdb.Get(ctx, key).Result()
 
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return "", ErrUrlNotFound
 		}
 

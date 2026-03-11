@@ -5,9 +5,18 @@ services:
       - "8282:8282"
     environment:
       - REDIS_ADDR=db:6379
+      - PORT=8282
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     image: redis:8.6-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     volumes:
       - redis_data:/data
 

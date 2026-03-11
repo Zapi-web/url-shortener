@@ -5,9 +5,12 @@ COPY go.mod go.sum /app/
 RUN go mod download
 COPY . .
 
-RUN go build -o url-shortener ./cmd/url-shortener/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o url-shortener ./cmd/url-shortener/main.go
 
 FROM alpine:3.19
+
+RUN adduser -D appuser
+USER appuser
 
 WORKDIR /app
 COPY --from=builder /app/url-shortener .
