@@ -4,11 +4,11 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/Zapi-web/url-shortener/internal/storage/redis"
+	"github.com/Zapi-web/url-shortener/internal/storage/db"
 	"github.com/go-chi/chi/v5"
 )
 
-func GetNew(d *redis.Database) http.HandlerFunc {
+func GetNew(d *db.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortUrl := chi.URLParam(r, "short_url")
 

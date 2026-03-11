@@ -1,4 +1,4 @@
-package redis
+package db
 
 import (
 	"context"
@@ -12,7 +12,7 @@ type Database struct {
 	rdb *redis.Client
 }
 
-func NewDatabase(ctx context.Context, addr string) *Database {
+func NewDatabase(ctx context.Context, addr string) (*Database, error) {
 	var d Database
 
 	d.rdb = redis.NewClient(&redis.Options{
@@ -22,7 +22,13 @@ func NewDatabase(ctx context.Context, addr string) *Database {
 		Protocol: 2,
 	})
 
-	return &d
+	err := d.rdb.Ping(ctx).Err()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to ping a db %w", err)
+	}
+
+	return &d, nil
 }
 
 func (d *Database) Set(ctx context.Context, key, value string) error {

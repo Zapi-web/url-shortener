@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/Zapi-web/url-shortener/internal/lib/random"
-	"github.com/Zapi-web/url-shortener/internal/storage/redis"
+	"github.com/Zapi-web/url-shortener/internal/storage/db"
 )
 
 type Request struct {
@@ -17,7 +18,7 @@ type Response struct {
 	ShortURL string `json:"short_url"`
 }
 
-func New(db *redis.Database) http.HandlerFunc {
+func New(db *db.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req Request
 
@@ -31,6 +32,11 @@ func New(db *redis.Database) http.HandlerFunc {
 		}
 
 		slog.Debug("request decoded", "url", req.URL)
+
+		if !strings.HasPrefix(req.URL, "http://") && !strings.HasPrefix(req.URL, "https://") {
+			slog.Error("invalid request", "URL", req.URL)
+			http.Error(w, "invalid request", http.StatusBadRequest)
+		}
 
 		alias, err := random.RandomKey()
 		if err != nil {

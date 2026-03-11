@@ -9,7 +9,7 @@ import (
 	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/get"
 	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/save"
 	"github.com/Zapi-web/url-shortener/internal/logger"
-	"github.com/Zapi-web/url-shortener/internal/storage/redis"
+	"github.com/Zapi-web/url-shortener/internal/storage/db"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -30,7 +30,11 @@ func main() {
 	slog.SetDefault(logger.NewLogger(logLvl))
 	slog.Info("Logger initialized", "level", logLvl)
 
-	db := redis.NewDatabase(ctx, addr)
+	db, err := db.NewDatabase(ctx, addr)
+	if err != nil {
+		slog.Error("Failed to create a database", "err", err)
+		return
+	}
 	defer db.Close()
 
 	slog.Info("Database initialized")
