@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/get"
 	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/save"
@@ -45,8 +46,11 @@ func main() {
 	slog.Info("Starting server", "addr", addr, "port", port)
 
 	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: r,
+		Addr:         ":" + port,
+		Handler:      r,
+		ReadTimeout:  4 * time.Second,
+		WriteTimeout: 4 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	if err := srv.ListenAndServe(); err != nil {

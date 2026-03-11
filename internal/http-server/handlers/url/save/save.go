@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strings"
+	"net/url"
 
 	"github.com/Zapi-web/url-shortener/internal/lib/random"
 	"github.com/Zapi-web/url-shortener/internal/storage/db"
@@ -23,6 +23,7 @@ func New(db *db.Database) http.HandlerFunc {
 		var req Request
 
 		slog.Debug("trying to decode request")
+		r.Body = http.MaxBytesReader(w, r.Body, 1024*10)
 		err := json.NewDecoder(r.Body).Decode(&req)
 
 		if err != nil {
@@ -33,7 +34,7 @@ func New(db *db.Database) http.HandlerFunc {
 
 		slog.Debug("request decoded", "url", req.URL)
 
-		if !strings.HasPrefix(req.URL, "http://") && !strings.HasPrefix(req.URL, "https://") {
+		if _, err := url.ParseRequestURI(req.URL); err != nil {
 			slog.Error("invalid request", "URL", req.URL)
 			http.Error(w, "invalid request", http.StatusBadRequest)
 		}
