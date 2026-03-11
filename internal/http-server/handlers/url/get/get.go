@@ -1,6 +1,7 @@
 package get
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -9,7 +10,11 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func GetNew(d *db.Database) http.HandlerFunc {
+type URLGetter interface {
+	Get(ctx context.Context, key string) (string, error)
+}
+
+func GetNew(data URLGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortUrl := chi.URLParam(r, "short_url")
 
@@ -21,7 +26,7 @@ func GetNew(d *db.Database) http.HandlerFunc {
 
 		slog.Debug("short url received", "short_url", shortUrl)
 
-		val, err := d.Get(r.Context(), shortUrl)
+		val, err := data.Get(r.Context(), shortUrl)
 
 		if err != nil {
 			if errors.Is(err, db.ErrUrlNotFound) {

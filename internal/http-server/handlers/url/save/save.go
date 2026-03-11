@@ -1,13 +1,13 @@
 package save
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/url"
 
 	"github.com/Zapi-web/url-shortener/internal/lib/random"
-	"github.com/Zapi-web/url-shortener/internal/storage/db"
 )
 
 type Request struct {
@@ -18,7 +18,11 @@ type Response struct {
 	ShortURL string `json:"short_url"`
 }
 
-func New(db *db.Database) http.HandlerFunc {
+type URLSetter interface {
+	Set(ctx context.Context, key, value string) error
+}
+
+func New(data URLSetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req Request
 
@@ -47,7 +51,7 @@ func New(db *db.Database) http.HandlerFunc {
 			return
 		}
 
-		err = db.Set(r.Context(), alias, req.URL)
+		err = data.Set(r.Context(), alias, req.URL)
 		if err != nil {
 			slog.Error("failed to save url", "alias", alias, "err", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
