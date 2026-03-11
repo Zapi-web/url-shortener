@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/get"
@@ -41,7 +43,7 @@ func main() {
 	slog.Info("Database initialized")
 
 	r.Post("/save", save.New(db))
-	r.Get("/{short_url:.{22}==}", get.GetNew(db))
+	r.Get("/{short_url}", get.GetNew(db))
 
 	slog.Info("Starting server", "addr", addr, "port", port)
 
@@ -53,7 +55,32 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
-		slog.Error("failed to start server", "err", err)
+	serverError := make(chan error, 1)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			serverError <- err
+		}
+	}()
+
+	sign := make(chan os.Signal, 1)
+	signal.Notify(sign, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case err := <-serverError:
+		if err != nil {
+			slog.Error("failed to start server", "err", err)
+		}
+	case sig := <-sign:
+		slog.Info("Received a signal. Trying to gracefull shutdown", "sig", sig)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := srv.Shutdown(ctx); err != nil {
+			srv.Close()
+			slog.Error("Could not stop server gracefully", "err", err)
+		}
 	}
+
+	slog.Info("Server stopped")
 }

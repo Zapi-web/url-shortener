@@ -37,6 +37,7 @@ func New(db *db.Database) http.HandlerFunc {
 		if _, err := url.ParseRequestURI(req.URL); err != nil {
 			slog.Error("invalid request", "URL", req.URL)
 			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
 		}
 
 		alias, err := random.RandomKey()
