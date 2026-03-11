@@ -1,6 +1,7 @@
 package get
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -23,6 +24,12 @@ func GetNew(d *db.Database) http.HandlerFunc {
 		val, err := d.Get(r.Context(), shortUrl)
 
 		if err != nil {
+			if errors.Is(err, db.ErrUrlNotFound) {
+				slog.Info(db.ErrUrlNotFound.Error())
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+
 			slog.Error("failed to get url", "err", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return

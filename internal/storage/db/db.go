@@ -2,11 +2,14 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/redis/go-redis/v9"
 )
+
+var ErrUrlNotFound = errors.New("url not found")
 
 type Database struct {
 	rdb *redis.Client
@@ -47,10 +50,14 @@ func (d *Database) Get(ctx context.Context, key string) (string, error) {
 	val, err := d.rdb.Get(ctx, key).Result()
 
 	if err != nil {
+		if err == redis.Nil {
+			return "", ErrUrlNotFound
+		}
+
 		return "", fmt.Errorf("failed to get a value from a db: %w", err)
 	}
 
-	slog.Debug("value getted", "key", key, "value", val)
+	slog.Debug("value fetched", "key", key, "value", val)
 
 	return val, nil
 }
