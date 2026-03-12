@@ -35,6 +35,10 @@ func NewDatabase(ctx context.Context, addr string) (*Database, error) {
 }
 
 func (d *Database) Set(ctx context.Context, key, value string) error {
+	if key == "" || value == "" {
+		return domain.ErrInputisEmpty
+	}
+
 	res, err := d.rdb.SetNX(ctx, key, value, 240*time.Hour).Result()
 
 	if res == false {
@@ -52,7 +56,7 @@ func (d *Database) Set(ctx context.Context, key, value string) error {
 
 func (d *Database) Get(ctx context.Context, key string) (string, error) {
 	if key == "" {
-		return "", domain.ErrKeyisEmpty
+		return "", domain.ErrInputisEmpty
 	}
 
 	val, err := d.rdb.Get(ctx, key).Result()

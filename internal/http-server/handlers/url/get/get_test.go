@@ -50,7 +50,7 @@ func TestGetHandler(t *testing.T) {
 		},
 		{
 			name:       "Empty Alias",
-			mockErr:    domain.ErrKeyisEmpty,
+			mockErr:    domain.ErrInputisEmpty,
 			wantStatus: http.StatusBadRequest,
 		},
 	}
