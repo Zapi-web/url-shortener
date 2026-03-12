@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Zapi-web/url-shortener/internal/config"
 	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/get"
 	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/save"
 	"github.com/Zapi-web/url-shortener/internal/logger"
@@ -19,21 +20,17 @@ import (
 func main() {
 	r := chi.NewRouter()
 	ctx := context.Background()
-	addr := os.Getenv("REDIS_ADDR")
-	port := os.Getenv("PORT")
+	cfg, err := config.ConfigInit()
 
-	if addr == "" {
-		addr = "localhost:6379"
-	}
-	if port == "" {
-		port = "8282"
+	if err != nil {
+		slog.Error("Failed to read config", "err", err)
+		return
 	}
 
-	logLvl := os.Getenv("LOG_LEVEL")
-	slog.SetDefault(logger.NewLogger(logLvl))
-	slog.Info("Logger initialized", "level", logLvl)
+	slog.SetDefault(logger.NewLogger(cfg.LogLevel))
+	slog.Info("Logger initialized", "level", cfg.LogLevel)
 
-	db, err := db.NewDatabase(ctx, addr)
+	db, err := db.NewDatabase(ctx, cfg.Addr)
 	if err != nil {
 		slog.Error("Failed to create a database", "err", err)
 		return
@@ -45,10 +42,10 @@ func main() {
 	r.Post("/save", save.New(db))
 	r.Get("/{short_url}", get.GetNew(db))
 
-	slog.Info("Starting server", "addr", addr, "port", port)
+	slog.Info("Starting server", "addr", cfg.Addr, "port", cfg.Port)
 
 	srv := &http.Server{
-		Addr:         ":" + port,
+		Addr:         ":" + cfg.Port,
 		Handler:      r,
 		ReadTimeout:  4 * time.Second,
 		WriteTimeout: 4 * time.Second,
