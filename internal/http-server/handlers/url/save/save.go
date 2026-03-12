@@ -3,10 +3,12 @@ package save
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/url"
 
+	"github.com/Zapi-web/url-shortener/internal/domain"
 	"github.com/Zapi-web/url-shortener/internal/lib/random"
 )
 
@@ -53,6 +55,11 @@ func New(data URLSetter) http.HandlerFunc {
 
 		err = data.Set(r.Context(), alias, req.URL)
 		if err != nil {
+			if errors.Is(err, domain.ErrKeyAlreadyExist) {
+				slog.Info(domain.ErrKeyAlreadyExist.Error())
+				http.Error(w, "key is already exist", http.StatusConflict)
+				return
+			}
 			slog.Error("failed to save url", "alias", alias, "err", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return

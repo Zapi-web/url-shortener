@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/Zapi-web/url-shortener/internal/storage/db"
+	"github.com/Zapi-web/url-shortener/internal/domain"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -29,8 +29,8 @@ func GetNew(data URLGetter) http.HandlerFunc {
 		val, err := data.Get(r.Context(), shortUrl)
 
 		if err != nil {
-			if errors.Is(err, db.ErrUrlNotFound) {
-				slog.Info(db.ErrUrlNotFound.Error())
+			if errors.Is(err, domain.ErrUrlNotFound) {
+				slog.Info(domain.ErrUrlNotFound.Error())
 				http.Error(w, "not found", http.StatusNotFound)
 				return
 			}

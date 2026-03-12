@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
+	"github.com/Zapi-web/url-shortener/internal/domain"
 	"github.com/redis/go-redis/v9"
 )
-
-var ErrUrlNotFound = errors.New("url not found")
 
 type Database struct {
 	rdb *redis.Client
@@ -35,7 +35,11 @@ func NewDatabase(ctx context.Context, addr string) (*Database, error) {
 }
 
 func (d *Database) Set(ctx context.Context, key, value string) error {
-	err := d.rdb.Set(ctx, key, value, 0).Err()
+	res, err := d.rdb.SetNX(ctx, key, value, 240*time.Hour).Result()
+
+	if res == false {
+		return domain.ErrKeyAlreadyExist
+	}
 
 	if err != nil {
 		return fmt.Errorf("failed to set a key-value in database: %w", err)
@@ -51,7 +55,7 @@ func (d *Database) Get(ctx context.Context, key string) (string, error) {
 
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return "", ErrUrlNotFound
+			return "", domain.ErrUrlNotFound
 		}
 
 		return "", fmt.Errorf("failed to get a value from a db: %w", err)
