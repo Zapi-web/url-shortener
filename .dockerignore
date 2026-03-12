@@ -1,0 +1,11 @@
+.git
+.gitignore
+
+.env
+*.env
+
+*_test.go
+
+dockerfile
+docker-compose.yaml
+.dockerignore
