@@ -29,6 +29,12 @@ func GetNew(data URLGetter) http.HandlerFunc {
 		val, err := data.Get(r.Context(), shortUrl)
 
 		if err != nil {
+			if errors.Is(err, domain.ErrKeyisEmpty) {
+				slog.Warn(domain.ErrKeyisEmpty.Error())
+				http.Error(w, "bad request", http.StatusBadRequest)
+				return
+			}
+
 			if errors.Is(err, domain.ErrUrlNotFound) {
 				slog.Info(domain.ErrUrlNotFound.Error())
 				http.Error(w, "not found", http.StatusNotFound)

@@ -51,6 +51,10 @@ func (d *Database) Set(ctx context.Context, key, value string) error {
 }
 
 func (d *Database) Get(ctx context.Context, key string) (string, error) {
+	if key == "" {
+		return "", domain.ErrKeyisEmpty
+	}
+
 	val, err := d.rdb.Get(ctx, key).Result()
 
 	if err != nil {
