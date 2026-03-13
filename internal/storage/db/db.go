@@ -77,5 +77,5 @@ func (d *Database) Get(ctx context.Context, key string) (string, error) {
 }
 
 func (d *Database) Close() {
-	d.rdb.Close()
+	_ = d.rdb.Close()
 }

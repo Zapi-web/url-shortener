@@ -74,7 +74,7 @@ func main() {
 		defer cancel()
 
 		if err := srv.Shutdown(ctx); err != nil {
-			srv.Close()
+			_ = srv.Close()
 			slog.Error("Could not stop server gracefully", "err", err)
 		}
 	}
