@@ -6,7 +6,7 @@ services:
     environment:
       - REDIS_ADDR=db:6379
       - PORT=8282
-      - LOG_LEVEL=info
+      - LOG_LEVEL=debug
     depends_on:
       db:
         condition: service_healthy

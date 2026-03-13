@@ -39,13 +39,15 @@ func (d *Database) Set(ctx context.Context, key, value string) error {
 		return domain.ErrInputisEmpty
 	}
 
-	res, err := d.rdb.SetNX(ctx, key, value, 240*time.Hour).Result()
-
-	if res == false {
-		return domain.ErrKeyAlreadyExist
-	}
+	err := d.rdb.SetArgs(ctx, key, value, redis.SetArgs{
+		TTL:  240 * time.Hour,
+		Mode: "NX",
+	}).Err()
 
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return domain.ErrKeyAlreadyExist
+		}
 		return fmt.Errorf("failed to set a key-value in database: %w", err)
 	}
 

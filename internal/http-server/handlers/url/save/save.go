@@ -72,6 +72,9 @@ func New(data URLSetter) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(res)
+
+		if err := json.NewEncoder(w).Encode(res); err != nil {
+			slog.Error("failed to encode response", "err", err)
+		}
 	}
 }
