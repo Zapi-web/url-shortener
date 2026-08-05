@@ -2,10 +2,10 @@ services:
   go:
     build: .
     ports:
-      - "8282:8282"
+      - "8080:8080"
     environment:
       - REDIS_ADDR=db:6379
-      - PORT=8282
+      - PORT=80820
       - LOG_LEVEL=debug
     depends_on:
       db:
