@@ -15,3 +15,11 @@ on:
 jobs:
     go-tests:
         uses: ./.github/workflows/go.yaml
+    docker-registry-push:
+        uses: ./.github/workflows/docker.yaml
+        needs: go-tests
+        if: github.event_name == 'push'
+        secrets: inherit
+        permissions:
+            contents: read
+            packages: write
