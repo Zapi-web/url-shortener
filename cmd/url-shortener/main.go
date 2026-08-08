@@ -54,7 +54,11 @@ func run() int {
 		appCache = cache.NewFake()
 	} else {
 		appCache = redisCache
-		defer redisCache.Close()
+		defer func() {
+			if err := redisCache.Close(); err != nil {
+				slog.Error("failed to close redis", "err", err)
+			}
+		}()
 	}
 
 	slog.Info("Cache initialized")
