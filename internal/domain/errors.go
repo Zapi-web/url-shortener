@@ -3,7 +3,6 @@ package domain
 import "errors"
 
 var (
-	ErrUrlNotFound     = errors.New("url not found")
-	ErrKeyAlreadyExist = errors.New("key already exists")
-	ErrInputisEmpty    = errors.New("given input is empty")
+	ErrUrlNotFound  = errors.New("url not found")
+	ErrInputisEmpty = errors.New("given input is empty")
 )
