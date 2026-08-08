@@ -48,7 +48,7 @@ func run() int {
 
 	var appCache service.Cache
 
-	redisCache, err := cache.NewRedis(ctx, cfg.RedisAddr, cfg.CacheTTL)
+	redisCache, err := cache.NewRedis(ctx, cfg.RedisAddr, cfg.RedisPassword, cfg.CacheTTL)
 	if err != nil {
 		slog.Warn("Failed to connect to a cache, fallback to only database pattern", "err", err)
 		appCache = cache.NewFake()
@@ -77,7 +77,7 @@ func run() int {
 	handlers := server.NewHandlers(shortener)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healtz", handlers.ServeHealthz)
+	mux.HandleFunc("GET /healthz", handlers.ServeHealthz)
 	mux.HandleFunc("POST /api/v1/", handlers.ServeSaveUrl)
 	mux.HandleFunc("GET /{id}", handlers.ServeGetURL)
 	mux.HandleFunc("GET /metrics", Vmetrics.ExposeMetrics)
@@ -85,8 +85,11 @@ func run() int {
 	mv := server.NewMiddleware(Vmetrics)
 	handler := mv.MetricsMiddleware(mux)
 
-	httpServer := server.NewServer(cfg.Port, handler)
-	serverError := httpServer.RunServer(ctx)
+	httpServer := server.NewServer(cfg.Port, handler, cfg.ReadTimeout, cfg.WriteTimeout, cfg.ShutdownTimeout)
+	serverError := make(chan error, 1)
+	go func() {
+		serverError <- httpServer.RunServer()
+	}()
 
 	select {
 	case err := <-serverError:
@@ -97,9 +100,10 @@ func run() int {
 		}
 	case <-ctx.Done():
 		slog.Info("received a signal, starting graceful shutdown")
+		if err := httpServer.Shutdown(); err != nil {
+			slog.Error("failed to shutdown server", "err", err)
+		}
 	}
-
-	<-serverError // when chan is closed, means that server is fully stoped
 
 	slog.Debug("Server stopped")
 	return 0

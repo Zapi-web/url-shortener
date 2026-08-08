@@ -2,50 +2,53 @@ package server
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
 type Server struct {
-	srv *http.Server
+	srv             *http.Server
+	shutdownTimeout time.Duration
 }
 
-func NewServer(port string, handler http.Handler) *Server {
+func NewServer(port string, handler http.Handler, readTimeout, writeTimeout, shutdownTimeout time.Duration) *Server {
 	return &Server{
 		srv: &http.Server{
-			Addr:    ":" + port,
-			Handler: handler,
+			Addr:         ":" + port,
+			Handler:      handler,
+			ReadTimeout:  readTimeout,
+			WriteTimeout: writeTimeout,
+			IdleTimeout:  120 * time.Second,
 		},
+		shutdownTimeout: shutdownTimeout,
 	}
 }
 
-func (s *Server) RunServer(ctx context.Context) <-chan error {
-	slog.Info("Starting server", "addr", s.srv.Addr)
-	errChan := make(chan error, 1)
+func (s *Server) RunServer() error {
+	slog.Info("starting HTTP server", "addr", s.srv.Addr)
+	err := s.srv.ListenAndServe()
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
 
-	go func() {
-		defer close(errChan)
+	return err
+}
 
-		go func() {
-			if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				errChan <- err
-			}
-		}()
+func (s *Server) Shutdown() error {
+	slog.Info("starting graceful shutdown of http server")
 
-		<-ctx.Done()
-		slog.InfoContext(ctx, "received a signal; draining HTTP server connection")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+	defer cancel()
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := s.srv.Shutdown(shutdownCtx); err != nil {
-			slog.ErrorContext(shutdownCtx, "failed to shutdown HTTP server gracefully", "err", err)
-			if closeErr := s.srv.Close(); closeErr != nil {
-				slog.ErrorContext(shutdownCtx, "failed to force-shutdown HTTP server", "err", closeErr)
-			}
+	if err := s.srv.Shutdown(shutdownCtx); err != nil {
+		if closeErr := s.srv.Close(); closeErr != nil {
+			return fmt.Errorf("failed to force-shutdown HTTP server: %w", closeErr)
 		}
-	}()
+		return fmt.Errorf("failed to shutdown HTTP server gracefully: %w", err)
+	}
 
-	return errChan
+	return nil
 }
