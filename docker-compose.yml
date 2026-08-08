@@ -1,25 +1,46 @@
+version: '3.8'
+
 services:
   go:
     build: .
     ports:
       - "8080:8080"
+    container_name: url-shortener-test
     environment:
-      - REDIS_ADDR=db:6379
-      - PORT=80820
+      - PORT=8080
+      - NODE_ID=1
       - LOG_LEVEL=debug
+      - DATABASE_TTL=1h
+      - CONNECTION_STRING=postgres://postgres:password@db:5432/postgres?sslmode=disable
+      - REDIS_ADDR=cache:6379
     depends_on:
-      db:
-        condition: service_healthy
+          db:
+            condition: service_healthy
+          cache:
+            condition: service_healthy
 
   db:
-    image: redis:8.6-alpine
+    image: postgres:18-alpine
+    container_name: postgres-test
+    environment:
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-table.sql:ro
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 3s
       timeout: 3s
       retries: 5
-    volumes:
-      - redis_data:/data
-
-volumes:
-  redis_data:
+  
+  cache:
+      image: redis:8-alpine
+      container_name: redis-test
+      ports:
+        - "6379:6379"
+      healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 3s
+        timeout: 3s
+        retries: 5

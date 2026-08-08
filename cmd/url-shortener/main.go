@@ -7,77 +7,96 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/Zapi-web/url-shortener/internal/base62"
+	"github.com/Zapi-web/url-shortener/internal/cache"
 	"github.com/Zapi-web/url-shortener/internal/config"
-	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/get"
-	"github.com/Zapi-web/url-shortener/internal/http-server/handlers/url/save"
+	"github.com/Zapi-web/url-shortener/internal/database"
+	"github.com/Zapi-web/url-shortener/internal/kgs"
 	"github.com/Zapi-web/url-shortener/internal/logger"
-	"github.com/Zapi-web/url-shortener/internal/storage/db"
-	"github.com/go-chi/chi/v5"
+	"github.com/Zapi-web/url-shortener/internal/metrics"
+	"github.com/Zapi-web/url-shortener/internal/server"
+	"github.com/Zapi-web/url-shortener/internal/service"
 )
 
 func main() {
-	r := chi.NewRouter()
-	ctx := context.Background()
-	cfg, err := config.ConfigInit()
+	os.Exit(run())
+}
+
+func run() int {
+	cfg, err := config.Init()
 
 	if err != nil {
 		slog.Error("Failed to read config", "err", err)
-		return
+		return 1
 	}
 
 	slog.SetDefault(logger.NewLogger(cfg.LogLevel))
 	slog.Info("Logger initialized", "level", cfg.LogLevel)
 
-	db, err := db.NewDatabase(ctx, cfg.Addr)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	postgresDB, err := database.NewPostgres(ctx, cfg.ConnString)
 	if err != nil {
-		slog.Error("Failed to create a database", "err", err)
-		return
+		slog.Error("failed to connect to a database", "err", err)
+		return 1
 	}
-	defer db.Close()
+	defer postgresDB.Close()
 
 	slog.Info("Database initialized")
 
-	r.Post("/save", save.New(db))
-	r.Get("/{short_url}", get.GetNew(db))
+	var appCache service.Cache
 
-	slog.Info("Starting server", "addr", cfg.Addr, "port", cfg.Port)
-
-	srv := &http.Server{
-		Addr:         ":" + cfg.Port,
-		Handler:      r,
-		ReadTimeout:  4 * time.Second,
-		WriteTimeout: 4 * time.Second,
-		IdleTimeout:  60 * time.Second,
+	redisCache, err := cache.NewRedis(ctx, cfg.RedisAddr, cfg.CacheTTL)
+	if err != nil {
+		slog.Warn("Failed to connect to a cache, fallback to only database pattern", "err", err)
+		appCache = cache.NewFake()
+	} else {
+		appCache = redisCache
+		defer redisCache.Close()
 	}
 
-	serverError := make(chan error, 1)
+	slog.Info("Cache initialized")
 
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			serverError <- err
-		}
-	}()
+	kgs, err := kgs.New(cfg.NodeID)
+	if err != nil {
+		slog.Error("failed to make an kgs", "err", err)
+		return 1
+	}
 
-	sign := make(chan os.Signal, 1)
-	signal.Notify(sign, syscall.SIGINT, syscall.SIGTERM)
+	encode := base62.New()
+	Vmetrics := metrics.New()
+
+	shortener := service.New(postgresDB, appCache, kgs, encode, Vmetrics, cfg.DbTTL)
+
+	handlers := server.NewHandlers(shortener)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healtz", handlers.ServeHealthz)
+	mux.HandleFunc("POST /api/v1/", handlers.ServeSaveUrl)
+	mux.HandleFunc("GET /{id}", handlers.ServeGetURL)
+	mux.HandleFunc("GET /metrics", Vmetrics.ExposeMetrics)
+
+	mv := server.NewMiddleware(Vmetrics)
+	handler := mv.MetricsMiddleware(mux)
+
+	httpServer := server.NewServer(cfg.Port, handler)
+	serverError := httpServer.RunServer(ctx)
 
 	select {
 	case err := <-serverError:
 		if err != nil {
-			slog.Error("failed to start server", "err", err)
+			slog.Error("received an error from http server", "err", err)
+			stop()
+			return 1
 		}
-	case sig := <-sign:
-		slog.Info("Received a signal. Trying to gracefull shutdown", "sig", sig)
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := srv.Shutdown(ctx); err != nil {
-			_ = srv.Close()
-			slog.Error("Could not stop server gracefully", "err", err)
-		}
+	case <-ctx.Done():
+		slog.Info("received a signal, starting graceful shutdown")
 	}
 
-	slog.Info("Server stopped")
+	<-serverError // when chan is closed, means that server is fully stoped
+
+	slog.Debug("Server stopped")
+	return 0
 }
