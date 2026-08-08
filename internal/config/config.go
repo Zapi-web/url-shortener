@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -10,18 +11,22 @@ import (
 )
 
 type Config struct {
+	// Server
+	Port            string        `env:"PORT" env-default:"8080"`
+	LogLevel        string        `env:"LOG_LEVEL" env-default:"info"`
+	NodeID          int64         `env:"NODE_ID" env-required:"true"`
+	ReadTimeout     time.Duration `env:"HTTP_READ_TIMEOUT" env-default:"5s"`
+	WriteTimeout    time.Duration `env:"HTTP_WRITE_TIMEOUT" env-default:"10s"`
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
+
 	// Cache
-	RedisAddr string        `env:"REDIS_ADDR" env-default:"localhost:6379"`
-	CacheTTL  time.Duration `env:"CACHE_TTL" env-default:"24h"`
+	RedisAddr     string        `env:"REDIS_ADDR" env-default:"localhost:6379"`
+	RedisPassword string        `env:"REDIS_PASSWORD" env-default:""`
+	CacheTTL      time.Duration `env:"CACHE_TTL" env-default:"24h"`
 
 	// Database
 	DbTTL      time.Duration `env:"DATABASE_TTL" env-default:"336h"`
 	ConnString string        `env:"CONNECTION_STRING" env-required:"true"`
-
-	// App
-	Port     string `env:"PORT" env-default:"8080"`
-	LogLevel string `env:"LOG_LEVEL" env-default:"info"`
-	NodeID   int64  `env:"NODE_ID" env-required:"true"`
 }
 
 func Init() (*Config, error) {
@@ -37,6 +42,10 @@ func Init() (*Config, error) {
 		}
 	}
 
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("config validate failed: %w", err)
+	}
+
 	return &cfg, nil
 }
 
@@ -48,6 +57,12 @@ func (c *Config) Validate() error {
 
 	if c.NodeID < 0 {
 		return fmt.Errorf("invalid NODE_ID %d: %w", c.NodeID, err)
+	}
+
+	validLogLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
+	if !validLogLevels[c.LogLevel] {
+		slog.Warn("invalid LOG_LEVEL, fallback to 'info'", "LOG_LEVEL", c.LogLevel)
+		c.LogLevel = "info"
 	}
 
 	return nil

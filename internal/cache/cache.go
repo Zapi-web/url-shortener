@@ -15,10 +15,10 @@ type Redis struct {
 	ttl time.Duration
 }
 
-func NewRedis(ctx context.Context, addr string, ttl time.Duration) (*Redis, error) {
+func NewRedis(ctx context.Context, addr string, password string, ttl time.Duration) (*Redis, error) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     addr,
-		Password: "",
+		Password: password,
 		DB:       0,
 		Protocol: 3,
 	})
