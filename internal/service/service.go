@@ -34,6 +34,9 @@ func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (st
 	if longURL == "" {
 		return "", domain.ErrInputisEmpty
 	}
+	if userID <= 0 {
+		return "", domain.ErrInvalidInput
+	}
 
 	id := s.KGS.Generate()
 

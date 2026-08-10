@@ -27,8 +27,6 @@ type KGS interface {
 }
 
 type Metrics interface {
-	IncTotalRequests(handler string, status int)
-	ObserveRequestDuration(handler string, status int, duration time.Duration)
 	IncTotalCacheRequest(cacheStatus string)
 	ObserveQueryDuration(handler string, duration time.Duration)
 }
