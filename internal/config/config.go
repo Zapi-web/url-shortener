@@ -46,24 +46,32 @@ func Init() (*Config, error) {
 		return nil, fmt.Errorf("config validate failed: %w", err)
 	}
 
+	cfg.Normalize()
+
 	return &cfg, nil
 }
 
 func (c *Config) Validate() error {
 	port, err := strconv.Atoi(c.Port)
-	if err != nil || port < 1 || port > 65535 {
-		return fmt.Errorf("invalid PORT %q: %w", c.Port, err)
+	if err != nil {
+		return fmt.Errorf("port is not a number %q: %w", c.Port, err)
+	}
+
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("port is out-of-bounds %d", port)
 	}
 
 	if c.NodeID < 0 {
 		return fmt.Errorf("invalid NODE_ID %d: %w", c.NodeID, err)
 	}
 
+	return nil
+}
+
+func (c *Config) Normalize() {
 	validLogLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
 	if !validLogLevels[c.LogLevel] {
 		slog.Warn("invalid LOG_LEVEL, fallback to 'info'", "LOG_LEVEL", c.LogLevel)
 		c.LogLevel = "info"
 	}
-
-	return nil
 }
