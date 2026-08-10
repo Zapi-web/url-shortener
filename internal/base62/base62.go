@@ -7,6 +7,11 @@ import (
 	"github.com/Zapi-web/url-shortener/internal/domain"
 )
 
+var (
+	ErrInvalidCharacter = errors.New("invalid base62 character")
+	ErrOverflow         = errors.New("uint64 overflow")
+)
+
 type Base62Encoder struct{}
 
 const base62Alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -55,11 +60,11 @@ func (e *Base62Encoder) Decode(str string) (uint64, error) {
 		val := decodeMap[str[i]]
 
 		if val == -1 {
-			return 0, errors.New("invalid base62 character")
+			return 0, ErrInvalidCharacter
 		}
 
 		if res > (math.MaxUint64-uint64(val))/62 {
-			return 0, errors.New("uint64 is overflowed")
+			return 0, ErrOverflow
 		}
 
 		res = res*62 + uint64(val)
