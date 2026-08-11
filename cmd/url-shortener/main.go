@@ -102,6 +102,7 @@ func run() int {
 		slog.Info("received a signal, starting graceful shutdown")
 		if err := httpServer.Shutdown(); err != nil {
 			slog.Error("failed to shutdown server", "err", err)
+			return 1
 		}
 	}
 
