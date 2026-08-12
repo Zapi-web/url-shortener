@@ -1,0 +1,35 @@
+name: OpenTofu CI
+
+on:
+    workflow_call:
+
+jobs:
+    Lint:
+        name: Linting
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: opentofu/setup-opentofu@v2
+
+            - name: Tofu FMT
+              run: tofu fmt -recursive -check
+
+            - name: Tofu init
+              run: tofu init -backend=false
+
+            - name: Tofu Validate
+              run: tofu validate
+
+            - name: Setup TFLint
+              uses: terraform-linters/setup-tflint@v6
+              with:
+                tflint_version: v0.62.0
+                cache: true
+            
+            - name: Init TFLint
+              run: tflint --init
+              env:
+                GITHUB_TOKEN: ${{ github.token }}
+            
+            - name: Run TFLint
+              run: tflint --recursive
