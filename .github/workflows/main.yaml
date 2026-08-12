@@ -15,6 +15,9 @@ on:
 jobs:
     go-tests:
         uses: ./.github/workflows/go.yaml
+    tf-linting:
+        uses: ./.github/workflows/tofu.yaml
+
     docker-registry-push:
         uses: ./.github/workflows/docker.yaml
         needs: go-tests
