@@ -10,6 +10,7 @@ resource "aws_instance" "k3s_node_instance" {
   tags = {
     Name        = "${var.app_name}-${var.environment}-node-instance-${each.key}"
     Environment = var.environment
-    Role        = "node"
+    Role        = "server"
+    Cluster     = "${var.app_name}-${var.environment}-k3s"
   }
 }
