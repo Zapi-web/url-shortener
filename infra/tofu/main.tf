@@ -27,7 +27,6 @@ module "k3s_nodes" {
   environment            = var.environment
   instance_type          = var.instances_type
   debian_version_data_id = module.debian.debian_version_id
-  vpc_id                 = module.vpc.vpc_id
   subnet_ids             = module.vpc.public_subnet_ids
   k3s_nodes_sg_id        = module.security_groups.k3s_nodes_sg_id
   key_name               = var.key_name

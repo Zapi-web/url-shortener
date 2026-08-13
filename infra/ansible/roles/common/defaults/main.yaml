@@ -1,0 +1,8 @@
+common_base_packages:
+  - curl
+  - sudo
+  - nano
+  - vim
+  - iptables
+  - open-iscsi
+  - nfs-common

@@ -1,5 +1,5 @@
 data "aws_ami" "debian" {
-  for_each = toset(["10", "11", "12", "13"])
+  for_each = toset(["11", "12", "13"])
 
   most_recent = true
   owners      = ["136693071363"]

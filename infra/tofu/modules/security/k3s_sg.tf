@@ -31,7 +31,7 @@ resource "aws_security_group_rule" "allow_ssh" {
   security_group_id = aws_security_group.k3s_sg.id
 }
 
-resource "aws_security_group_rule" "allow_k3s_api" {
+resource "aws_security_group_rule" "allow_k3s_api_for_admin" {
   from_port         = 6443
   to_port           = 6443
   type              = "ingress"
@@ -39,6 +39,16 @@ resource "aws_security_group_rule" "allow_k3s_api" {
   cidr_blocks       = [var.admin_ip]
   security_group_id = aws_security_group.k3s_sg.id
 }
+
+resource "aws_security_group_rule" "allow_k3s_api_for_nodes" {
+  from_port                = 6443
+  to_port                  = 6443
+  type                     = "ingress"
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.k3s_sg.id
+  security_group_id        = aws_security_group.k3s_sg.id
+}
+
 
 resource "aws_security_group_rule" "allow_flannel_xvlan" {
   from_port                = 8472
@@ -73,5 +83,5 @@ resource "aws_security_group_rule" "allow_egress_for_k3s" {
   type              = "egress"
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.lb_sg.id
+  security_group_id = aws_security_group.k3s_sg.id
 }
