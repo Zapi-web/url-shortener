@@ -9,7 +9,7 @@ import (
 )
 
 func TestVictoriaMetrics_ExposeMetrics(t *testing.T) {
-	vm := New()
+	vm := NewVM()
 
 	vm.IncTotalRequests("/api/v1/", http.StatusOK)
 	vm.ObserveRequestDuration("/", http.StatusFound, 150*time.Millisecond)
@@ -19,7 +19,7 @@ func TestVictoriaMetrics_ExposeMetrics(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	rec := httptest.NewRecorder()
 
-	vm.ExposeMetrics(rec, req)
+	ExposeMetrics(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("ExposeMetrics() expected code = %d; got %d", http.StatusOK, rec.Code)

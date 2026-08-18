@@ -48,7 +48,7 @@ func run() int {
 
 	var appCache service.Cache
 
-	redisCache, err := cache.NewRedis(ctx, cfg.RedisAddr, cfg.RedisPassword, cfg.CacheTTL)
+	redisCache, err := cache.NewRedis(ctx, cfg.RedisAddrs, cfg.RedisMasterName, cfg.RedisPassword, cfg.CacheTTL)
 	if err != nil {
 		slog.Warn("Failed to connect to a cache, fallback to only database pattern", "err", err)
 		appCache = cache.NewFake()
@@ -70,22 +70,36 @@ func run() int {
 	}
 
 	encode := base62.New()
-	Vmetrics := metrics.New()
 
-	shortener := service.New(postgresDB, appCache, kgs, encode, Vmetrics, cfg.DbTTL)
+	var prodMetrics interface {
+		service.Metrics
+		server.Metrics
+	}
 
-	handlers := server.NewHandlers(shortener)
+	if cfg.MetricsEnable {
+		prodMetrics = metrics.NewVM()
+	} else {
+		prodMetrics = metrics.NewFake()
+	}
+
+	shortener := service.New(postgresDB, appCache, kgs, encode, prodMetrics, cfg.DbTTL)
+	handler := server.NewHandlers(shortener)
+	mv := server.NewMiddleware(prodMetrics)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", handlers.ServeHealthz)
-	mux.HandleFunc("POST /api/v1/", handlers.ServeSaveUrl)
-	mux.HandleFunc("GET /{id}", handlers.ServeGetURL)
-	mux.HandleFunc("GET /metrics", Vmetrics.ExposeMetrics)
+	mux.HandleFunc("GET /healthz", handler.ServeHealthz)
+	mux.HandleFunc("POST /api/v1/", handler.ServeSaveUrl)
+	mux.HandleFunc("GET /{id}", handler.ServeGetURL)
+	if cfg.MetricsEnable {
+		mux.HandleFunc("GET /metrics", metrics.ExposeMetrics)
+	}
 
-	mv := server.NewMiddleware(Vmetrics)
-	handler := mv.MetricsMiddleware(mux)
+	var rootHandler http.Handler = mux
+	if cfg.MetricsEnable {
+		rootHandler = mv.MetricsMiddleware(mux)
+	}
 
-	httpServer := server.NewServer(cfg.Port, handler, cfg.ReadTimeout, cfg.WriteTimeout, cfg.ShutdownTimeout)
+	httpServer := server.NewServer(cfg.Port, rootHandler, cfg.ReadTimeout, cfg.WriteTimeout, cfg.ShutdownTimeout)
 	serverError := make(chan error, 1)
 	go func() {
 		serverError <- httpServer.RunServer()

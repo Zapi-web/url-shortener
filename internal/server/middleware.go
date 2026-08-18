@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-type responseWritter struct {
+type responseWriter struct {
 	http.ResponseWriter
 	statusCode int
 }
 
-func (rw *responseWritter) WriteHeader(code int) {
+func (rw *responseWriter) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
 }
@@ -33,7 +33,7 @@ func NewMiddleware(metrics Metrics) *Middleware {
 
 func (m *Middleware) MetricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rw := &responseWritter{ResponseWriter: w, statusCode: http.StatusOK}
+		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 		slog.DebugContext(r.Context(), "new request", "method", r.Method)
 
@@ -41,7 +41,12 @@ func (m *Middleware) MetricsMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(rw, r)
 		reqDuration := time.Since(start)
 
-		m.Metrics.IncTotalRequests(r.Method, rw.statusCode)
-		m.Metrics.ObserveRequestDuration(r.Method, rw.statusCode, reqDuration)
+		pattern := r.Pattern
+		if pattern == "" {
+			pattern = "unmatched"
+		}
+
+		m.Metrics.IncTotalRequests(pattern, rw.statusCode)
+		m.Metrics.ObserveRequestDuration(pattern, rw.statusCode, reqDuration)
 	})
 }

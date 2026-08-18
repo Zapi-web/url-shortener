@@ -18,11 +18,13 @@ type Config struct {
 	ReadTimeout     time.Duration `env:"HTTP_READ_TIMEOUT" env-default:"5s"`
 	WriteTimeout    time.Duration `env:"HTTP_WRITE_TIMEOUT" env-default:"10s"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
+	MetricsEnable   bool          `env:"ENABLE_METRICS" env-default:"false"`
 
 	// Cache
-	RedisAddr     string        `env:"REDIS_ADDR" env-default:"localhost:6379"`
-	RedisPassword string        `env:"REDIS_PASSWORD" env-default:""`
-	CacheTTL      time.Duration `env:"CACHE_TTL" env-default:"24h"`
+	RedisAddrs      []string      `env:"REDIS_ADDRS" env-default:"localhost:6379" env-separator:","`
+	RedisMasterName string        `env:"REDIS_MASTER_NAME" env-default:""`
+	RedisPassword   string        `env:"REDIS_PASSWORD" env-default:""`
+	CacheTTL        time.Duration `env:"CACHE_TTL" env-default:"24h"`
 
 	// Database
 	DbTTL      time.Duration `env:"DATABASE_TTL" env-default:"336h"`
