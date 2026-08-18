@@ -1,0 +1,108 @@
+fullnameOverride: "vm"
+
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+vmsingle:
+  enabled: true
+  spec:
+    retentionPeriod: "14d"
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+    storage:
+      storageClassName: "local-path"
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 30Gi
+
+vmagent:
+  enabled: true
+  rbac:
+    namespaced: false
+  spec:
+    selectAllByDefault: true
+    serviceScrapeNamespaceSelector: {}
+    podScrapeNamespaceSelector: {}
+    nodeScrapeNamespaceSelector: {}
+    staticScrapeNamespaceSelector: {}
+    probeNamespaceSelector: {}
+    scrapeConfigNamespaceSelector: {}
+
+
+vlsingle:
+  enabled: true
+  spec:
+    retentionPeriod: "30d"
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+    storage:
+      storageClassName: "local-path"
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 50Gi
+
+vtsingle:
+  enabled: true
+  spec:
+    retentionPeriod: "7d"
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+    storage:
+      storageClassName: "local-path"
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+
+victoria-metrics-operator:
+  enabled: true
+  rbac:
+    create: true
+    namespaced: false
+  operator:
+    disable_prometheus_converter: false
+    prometheus_converter_subspace: ""
+
+grafana:
+  enabled: true
+  adminPassword: "admin"
+  plugins:
+    - victoriametrics-logs-datasource
+  persistence:
+    enabled: true
+    storageClassName: "local-path"
+    size: 5Gi
+  additionalDataSources:
+    - name: VictoriaTraces
+      type: jaeger
+      access: proxy
+      url: http://vtsingle-vm.monitoring.svc.cluster.local:10428/select/jaeger
+      isDefault: false
+      jsonData:
+        tracesToLogs:
+          datasourceUid: 'victoriametrics-logs-datasource'
+          tags: ['job', 'instance', 'pod', 'namespace']

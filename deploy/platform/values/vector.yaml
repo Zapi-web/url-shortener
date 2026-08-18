@@ -1,0 +1,59 @@
+role: "Agent"
+
+service:
+  enabled: false
+
+customConfig:
+  data_dir: /vector-data-dir
+  sources:
+    kubernetes_logs:
+      type: kubernetes_logs
+  transforms:
+    parse_json:
+      type: remap
+      inputs:
+        - kubernetes_logs
+      source: |
+        .namespace = .kubernetes.pod_namespace
+        .pod = .kubernetes.pod_name
+        .container = .kubernetes.container_name
+
+        .app = compact([
+          .kubernetes.pod_labels."app.kubernetes.io/name",
+          .kubernetes.pod_labels.app,
+          .kubernetes.container_name
+        ])[0]
+        
+        del(.kubernetes.pod_annotations)
+        del(.kubernetes.node_labels)
+        del(.kubernetes.pod_ips)
+        del(.file)
+
+        parsed, err = parse_json(.message)
+        
+        if err == null && is_object(parsed) {
+          . = merge!(., parsed)
+
+          if parsed.msg != null {
+            .message = parsed.msg
+          }
+        }
+
+        if .level == null {
+          .level = "info"
+        }
+
+        ._msg = .message
+  sinks:
+    victorialogs:
+      type: http
+      inputs:
+        - parse_json
+      uri: "http://vlsingle-vm.monitoring.svc.cluster.local:9428/insert/jsonline?_msg_field=_msg&_time_field=timestamp&_stream_fields=namespace,app,pod,container"
+      encoding:
+        codec: json
+      framing:
+        method: newline_delimited
+      compression: gzip
+      healthcheck:
+        enabled: false

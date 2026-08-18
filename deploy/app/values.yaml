@@ -1,0 +1,144 @@
+# =======================
+# APP SETTINGS
+# =======================
+
+service:
+  port: 80
+
+image:
+  repository: ghcr.io/zapi-web/url-shortener
+  tag: local # CHANGE
+  pullPolicy: Never
+
+replicas: 2
+logLevel: info
+port: 8080
+
+server:
+  readTimeout: 5s
+  writeTimeout: 10s
+  shutdownTimeout: 5s
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 256Mi
+  requests:
+    cpu: 20m
+    memory: 32Mi
+
+metrics:
+  enabled: true
+
+# =======================
+# CACHE
+# =======================
+
+cache:
+  ttl: 24h
+  # External cache
+  addrs: ""
+  masterName: ""
+
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+    password: "" # CHANGE
+  
+  master:
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "100m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: local-path
+  
+  replica:
+    replicaCount: 1
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "100m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: local-path
+
+  sentinel:
+    enabled: true
+    masterSet: mymaster
+    quorum: 2
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 50m
+      limits:
+        memory: 128Mi
+        cpu: 100m
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+
+# =======================
+# DATABASE
+# =======================
+
+postgresql:
+  enabled: true
+  instances: 2
+  image:
+    repository: ghcr.io/cloudnative-pg/postgresql
+    tag: 18 # CHANGE
+  database: "url_shortener"
+  username: "url_shortener_user"
+  existingSecret: 
+
+  storage:
+    size: 20Gi
+    storageClass: local-path
+
+  backup:
+    enabled: false
+    retentionPolicy: 14d
+    destinationPath: 
+    endpointURL:
+    walCompression: gzip
+    maxParallel: 1
+    secretName:
+
+    scheduledBackup:
+      enabled: true
+      schedule: 0 0 2 * * *
+      method: barmanObjectStore
+      ownerReference: none
+      immediate: false
+      suspend: false
+
+  monitoring:
+    enabled: true
+
+  topologyKey: kubernetes.io/hostname
+
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 250m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+
+database:
+  connectionString: ""

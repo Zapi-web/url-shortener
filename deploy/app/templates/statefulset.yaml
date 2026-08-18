@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: {{ .Release.Name }}-stateful-set
+    namespace: {{ .Release.Namespace }}
+    labels:
+        app.kubernetes.io/name: url-shortener
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  podManagementPolicy: Parallel
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: url-shortener
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: url-shortener
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: shortener
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+        env:
+        - name: PORT
+          value: {{ .Values.port | default "8080" | quote }}
+        - name: LOG_LEVEL
+          value: {{ .Values.logLevel | default "info" | quote }}
+        - name: NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
+        - name: READ_TIMEOUT
+          value: {{ .Values.server.readTimeout | default "5s" | quote }}
+        - name: WRITE_TIMEOUT
+          value: {{ .Values.server.writeTimeout | default "10s" | quote }}
+        - name: SHUTDOWN_TIMEOUT
+          value: {{ .Values.server.shutdownTimeout | default "5s" | quote }}
+        - name: ENABLE_METRICS
+          value: {{ .Values.metrics.enabled | default false | quote }}
+        
+        - name: REDIS_ADDRS
+          {{- if and .Values.redis.enabled .Values.redis.sentinel.enabled }}
+          value: "{{ .Release.Name }}-redis:26379"
+          {{- else if .Values.redis.enabled }}
+          value: "{{ .Release.Name }}-redis-master:6379"
+          {{- else }}
+          value: {{ .Values.cache.addrs | default "localhost:6379" | quote }}
+          {{- end}}
+        - name: REDIS_MASTER_NAME
+          {{- if and .Values.redis.enabled .Values.redis.sentinel.enabled }}
+          value: {{ .Values.redis.sentinel.masterSet | quote }}
+          {{- else }}
+          value: {{ .Values.cache.masterName | default "" | quote }}
+          {{- end }}
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              {{- if .Values.redis.enabled }}
+              name: {{ .Release.Name }}-redis
+              key: redis-password
+              {{- else }}
+              name: {{ .Release.Name }}-secret
+              key: REDIS_PASSWORD
+              {{- end }}
+        - name: CACHE_TTL
+          value: {{ .Values.cache.ttl | default "24h" | quote }}
+        - name: DATABASE_TTL
+          value: {{ .Values.postgresql.ttl | default "336h" | quote }}
+        - name: CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              {{- if .Values.postgresql.enabled }}
+              name: {{ .Release.Name }}-postgres-app
+              key: uri
+              {{- else }}
+              name: {{ .Release.Name }}-secret
+              key: CONNECTION_STRING
+              {{- end }}
+
+        ports:
+        - containerPort: {{ .Values.port | default 8080 }}
+          name: api
+
+        resources:
+          {{- toYaml .Values.resources | nindent 10}}
+        
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: api
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: api
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65532 
+          capabilities:
+            drop:
+              - ALL
