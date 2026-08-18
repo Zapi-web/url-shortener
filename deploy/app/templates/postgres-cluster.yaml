@@ -1,0 +1,67 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+    name: {{ .Release.Name }}-postgres
+    namespace: {{ .Release.Namespace }}
+    labels:
+        app.kubernetes.io/name: url-shortener
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+    instances: {{ .Values.postgresql.instances | default 2 }}
+    {{- if and .Values.postgresql.image .Values.postgresql.image.repository }}
+    imageName: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+    {{- end }}
+
+    bootstrap:
+        initdb:
+            database: {{ .Values.postgresql.database | default "url_shortener" }}
+            owner: {{ .Values.postgresql.username | default "url_shortener_user" }}
+            {{- if .Values.postgresql.existingSecret }}
+            secret:
+                name: {{ .Values.postgresql.existingSecret }}
+            {{- end }}
+
+    storage:
+        size: {{ .Values.postgresql.storage.size | default "20Gi" }}
+        {{- if .Values.postgresql.storage.storageClass }}
+        storageClass: {{ .Values.postgresql.storage.storageClass }}
+        {{- end }}
+    
+    postgresql:
+        synchronous:
+            method: any
+            number: 1
+            dataDurability: preferred
+    
+    {{- if .Values.postgresql.backup.enabled }}
+    backup:
+        retentionPolicy: {{ .Values.postgresql.backup.retentionPolicy | default "14d" }}
+        barmanObjectStore:
+            destinationPath: {{ .Values.postgresql.backup.destinationPath }}
+            endpointURL: {{ .Values.postgresql.backup.endpointURL }}
+            wal:
+                compression: {{ .Values.postgresql.backup.walCompression | default "gzip" }}
+                maxParallel: {{ .Values.postgresql.backup.maxParallel | default 1 }}
+            s3Credentials:
+                accessKeyId:
+                    name: {{ .Values.postgresql.backup.secretName }}
+                    key: ACCESS_KEY_ID
+                secretKeyId:
+                    name: {{ .Values.postgresql.backup.secretName }}
+                    key: SECRET_ACCESS_KEY
+    {{- end }}
+
+    monitoring:
+        enablePodMonitor: {{ .Values.postgresql.monitoring.enabled | default false }}
+    
+    affinity:
+        enablePodAntiAffinity: true
+        topologyKey: {{ .Values.postgresql.topologyKey | default "kubernetes.io/hostname" }}
+    
+    {{- if .Values.postgresql.resources }}
+    resources:
+        {{- toYaml .Values.postgresql.resources | nindent 6 }}
+    {{- end}}
+{{- end }}

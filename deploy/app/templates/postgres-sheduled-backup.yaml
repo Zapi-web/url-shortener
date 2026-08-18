@@ -1,0 +1,20 @@
+{{- if and .Values.postgresql.enabled .Values.postgresql.backup.enabled .Values.postgresql.backup.scheduledBackup.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+    name: {{ .Release.Name }}-postgres-daily-backup
+    namespace: {{ .Release.Namespace }}
+    labels:
+        app.kubernetes.io/name: url-shortener
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+    schedule: {{ .Values.postgresql.backup.scheduledBackup.schedule | default "0 0 0 * * *" | quote }}
+    cluster:
+        name: {{ .Release.Name }}-postgres
+
+    method: {{ .Values.postgresql.backup.scheduledBackup.method | default "barmanObjectStore" }}
+    backupOwnerReference: {{ .Values.postgresql.backup.scheduledBackup.ownerReference | default "none" }}
+    immediate: {{ .Values.postgresql.backup.scheduledBackup.immediate | default false }}
+    suspend: {{ .Values.postgresql.backup.scheduledBackup.suspend | default false }}
+{{- end }}
