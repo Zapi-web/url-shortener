@@ -1,4 +1,4 @@
-FROM golang:1.26.5-alpine AS builder
+FROM golang:1.26.6-alpine AS builder
 WORKDIR /app
 
 COPY go.mod go.sum /app/
@@ -7,10 +7,8 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o url-shortener ./cmd/url-shortener/main.go
 
-FROM alpine:3.19
-
-RUN adduser -D appuser
-USER appuser
+FROM gcr.io/distroless/static-debian12:latest
+USER 65532:65532
 
 WORKDIR /app
 COPY --from=builder /app/url-shortener .

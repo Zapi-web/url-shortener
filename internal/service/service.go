@@ -60,11 +60,12 @@ func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (st
 
 	encodedID := s.Encoder.Encode(url.ID)
 
-	cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	cacheCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
 
 	go func() {
 		defer cancel()
-		if err = s.Cache.Set(cacheCtx, encodedID, longURL); err != nil {
+
+		if err := s.Cache.Set(cacheCtx, encodedID, longURL); err != nil {
 			slog.WarnContext(cacheCtx, "failed to set record in cache", "key", encodedID, "err", err)
 			return
 		}
@@ -87,9 +88,11 @@ func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
 		return res, nil
 	}
 
-	s.Metrics.IncTotalCacheRequest("miss")
-	if !errors.Is(err, domain.ErrUrlNotFound) {
+	if errors.Is(err, domain.ErrUrlNotFound) {
+		s.Metrics.IncTotalCacheRequest("miss")
+	} else {
 		slog.WarnContext(ctx, "cache lookup failed, falling back to database", "key", shortURL, "err", err)
+		s.Metrics.IncTotalCacheRequest("error")
 	}
 
 	decodedID, err := s.Encoder.Decode(shortURL)
@@ -98,6 +101,7 @@ func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
 		return "", fmt.Errorf("failed to decode short url: %w", err)
 	}
 
+	start := time.Now()
 	url, err := s.Database.Get(ctx, decodedID)
 
 	if err != nil {
@@ -109,12 +113,12 @@ func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
 		return "", fmt.Errorf("failed to find short url in database: %w", err)
 	}
 
-	cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	s.Metrics.ObserveQueryDuration("get", time.Since(start))
+
+	cacheCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
 	go func() {
 		defer cancel()
-		err := s.Cache.Set(cacheCtx, shortURL, url.LongURL)
-
-		if err != nil {
+		if err := s.Cache.Set(cacheCtx, shortURL, url.LongURL); err != nil {
 			slog.WarnContext(cacheCtx, "failed to set a key-value record to a cache", "key", shortURL, "err", err)
 			return
 		}

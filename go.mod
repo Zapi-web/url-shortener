@@ -1,6 +1,6 @@
 module github.com/Zapi-web/url-shortener
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/VictoriaMetrics/metrics v1.44.0
@@ -24,7 +24,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect
 )
