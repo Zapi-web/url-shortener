@@ -11,16 +11,16 @@ import (
 )
 
 type Redis struct {
-	rdb *redis.Client
+	rdb redis.UniversalClient
 	ttl time.Duration
 }
 
-func NewRedis(ctx context.Context, addr string, password string, ttl time.Duration) (*Redis, error) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
-		DB:       0,
-		Protocol: 3,
+func NewRedis(ctx context.Context, addrs []string, masterName string, password string, ttl time.Duration) (*Redis, error) {
+	rdb := redis.NewUniversalClient(&redis.UniversalOptions{
+		Addrs:            addrs,
+		MasterName:       masterName,
+		Password:         password,
+		SentinelPassword: password,
 	})
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
