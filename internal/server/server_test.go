@@ -215,22 +215,25 @@ func TestHandlers_ServeGetURL(t *testing.T) {
 
 func TestMiddleware_MetricsMiddleware(t *testing.T) {
 	tests := []struct {
-		name           string
-		handlerStatus  int
-		expectedStatus int
-		method         string
+		name            string
+		handlerStatus   int
+		expectedStatus  int
+		method          string
+		expectedPattern string
 	}{
 		{
-			name:           "Default Status Code",
-			handlerStatus:  0,
-			expectedStatus: http.StatusOK,
-			method:         "GET",
+			name:            "Default Status Code",
+			handlerStatus:   0,
+			expectedStatus:  http.StatusOK,
+			method:          "GET",
+			expectedPattern: "unmatched",
 		},
 		{
-			name:           "Custom Status Code",
-			handlerStatus:  http.StatusNotFound,
-			expectedStatus: http.StatusNotFound,
-			method:         "POST",
+			name:            "Custom Status Code",
+			handlerStatus:   http.StatusNotFound,
+			expectedStatus:  http.StatusNotFound,
+			method:          "POST",
+			expectedPattern: "unmatched",
 		},
 	}
 
@@ -261,8 +264,8 @@ func TestMiddleware_MetricsMiddleware(t *testing.T) {
 				t.Fatalf("MetricsMiddleware().IncTotalRequests expected 1 call to metrics; got %d", len(mock.incTotalCalls))
 			}
 			incCall := mock.incTotalCalls[0]
-			if incCall.handler != tt.method {
-				t.Fatalf("MetricsMiddleware().IncTotalRequests expected method = %v; got %v", tt.method, incCall.handler)
+			if incCall.handler != tt.expectedPattern {
+				t.Fatalf("MetricsMiddleware().IncTotalRequests expected pattern = %v; got %v", tt.method, incCall.handler)
 			}
 			if incCall.status != tt.expectedStatus {
 				t.Fatalf("MetricsMiddleware().IncTotalRequests expected status in metrics = %d; got %d", tt.expectedStatus, incCall.status)
@@ -272,8 +275,8 @@ func TestMiddleware_MetricsMiddleware(t *testing.T) {
 				t.Fatalf("MetricsMiddleware().ObserveRequestDuration expected 1 call to metrics; got %d", len(mock.incTotalCalls))
 			}
 			obsCall := mock.observeCalls[0]
-			if obsCall.handler != tt.method {
-				t.Errorf("MetricsMiddleware().ObserveRequestDuration expected method = %v; got %v", tt.method, incCall.handler)
+			if obsCall.handler != tt.expectedPattern {
+				t.Errorf("MetricsMiddleware().ObserveRequestDuration expected pattern = %v; got %v", tt.method, incCall.handler)
 			}
 			if obsCall.status != tt.expectedStatus {
 				t.Errorf("MetricsMiddleware().ObserveRequestDuration expected status in metrics = %d; got %d", tt.expectedStatus, incCall.status)
@@ -282,6 +285,28 @@ func TestMiddleware_MetricsMiddleware(t *testing.T) {
 				t.Errorf("MetricsMiddleware().ObserveRequestDuration expected duration > 0; got %d", obsCall.duration)
 			}
 		})
+	}
+}
+
+func TestMiddleware_MetricsMiddleware_WithMuxPattern(t *testing.T) {
+	mock := &mockMetrics{}
+	middleware := NewMiddleware(mock)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	wrappedMux := middleware.MetricsMiddleware(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/123", nil)
+	rec := httptest.NewRecorder()
+
+	wrappedMux.ServeHTTP(rec, req)
+
+	expectedPattern := "GET /{id}"
+	if len(mock.incTotalCalls) != 1 || mock.incTotalCalls[0].handler != expectedPattern {
+		t.Fatalf("expected pattern %q, got %q", expectedPattern, mock.incTotalCalls[0].handler)
 	}
 }
 

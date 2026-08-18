@@ -10,7 +10,7 @@ import (
 
 type VictoriaMetrics struct{}
 
-func New() *VictoriaMetrics {
+func NewVM() *VictoriaMetrics {
 	return &VictoriaMetrics{}
 }
 
@@ -34,6 +34,6 @@ func (m *VictoriaMetrics) ObserveQueryDuration(handler string, duration time.Dur
 	metrics.GetOrCreateHistogram(name).Update(duration.Seconds())
 }
 
-func (m *VictoriaMetrics) ExposeMetrics(w http.ResponseWriter, req *http.Request) {
+func ExposeMetrics(w http.ResponseWriter, req *http.Request) {
 	metrics.WritePrometheus(w, true)
 }
