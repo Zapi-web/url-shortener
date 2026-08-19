@@ -44,6 +44,13 @@ func run() int {
 	}
 	defer postgresDB.Close()
 
+	if cfg.AutoMigrate {
+		if err = postgresDB.Migrate(ctx); err != nil {
+			slog.Error("failed to perform migration", "err", err)
+			return 1
+		}
+	}
+
 	slog.Info("Database initialized")
 
 	var appCache service.Cache
