@@ -75,6 +75,8 @@ spec:
           value: {{ .Values.cache.ttl | default "24h" | quote }}
         - name: DATABASE_TTL
           value: {{ .Values.postgresql.ttl | default "336h" | quote }}
+        - name: AUTO_MIGRATE
+          value: {{ .Values.autoMigrate | default false | quote }}
         - name: CONNECTION_STRING
           valueFrom:
             secretKeyRef:

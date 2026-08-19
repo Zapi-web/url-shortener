@@ -13,6 +13,7 @@ image:
 replicas: 2
 logLevel: info
 port: 8080
+autoMigrate: true
 
 server:
   readTimeout: 5s

@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -14,7 +15,11 @@ var migrationFiles embed.FS
 
 func (p *Postgres) Migrate(ctx context.Context) error {
 	db := stdlib.OpenDBFromPool(p.psql)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("failed to close connection to db after migratio", "err", err)
+		}
+	}()
 
 	goose.SetBaseFS(migrationFiles)
 
