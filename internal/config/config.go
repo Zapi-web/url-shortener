@@ -27,8 +27,9 @@ type Config struct {
 	CacheTTL        time.Duration `env:"CACHE_TTL" env-default:"24h"`
 
 	// Database
-	DbTTL      time.Duration `env:"DATABASE_TTL" env-default:"336h"`
-	ConnString string        `env:"CONNECTION_STRING" env-required:"true"`
+	DbTTL       time.Duration `env:"DATABASE_TTL" env-default:"336h"`
+	ConnString  string        `env:"CONNECTION_STRING" env-required:"true"`
+	AutoMigrate bool          `env:"AUTO_MIGRATE" env-default:"false"`
 }
 
 func Init() (*Config, error) {

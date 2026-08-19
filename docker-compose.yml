@@ -13,6 +13,7 @@ services:
       - DATABASE_TTL=1h
       - CONNECTION_STRING=postgres://postgres:password@db:5432/postgres?sslmode=disable
       - REDIS_ADDRS=cache:6379
+      - AUTO_MIGRATE=true
     depends_on:
           db:
             condition: service_healthy
@@ -26,8 +27,6 @@ services:
       POSTGRES_PASSWORD: password
     ports:
       - "5432:5432"
-    volumes:
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-table.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 3s

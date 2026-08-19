@@ -80,7 +80,9 @@ func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
 		return "", domain.ErrInputisEmpty
 	}
 
-	res, err := s.Cache.Get(ctx, shortURL)
+	getCacheCtx, getCancel := context.WithTimeout(ctx, 1*time.Second)
+	res, err := s.Cache.Get(getCacheCtx, shortURL)
+	getCancel()
 
 	if err == nil {
 		slog.DebugContext(ctx, "retrieved url from cache", "key", shortURL)
