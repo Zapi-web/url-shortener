@@ -30,6 +30,10 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
 
         env:
+        - name: APP_NAME
+          value: {{ .Release.Name }}
+        - name: ENVIRONMENT
+          value: {{ .Values.environment | default "test" | quote }}
         - name: PORT
           value: {{ .Values.port | default "8080" | quote }}
         - name: LOG_LEVEL
@@ -87,6 +91,13 @@ spec:
               name: {{ .Release.Name }}-secret
               key: CONNECTION_STRING
               {{- end }}
+        
+        - name: ENABLE_TRACES
+          value: {{ .Values.tracer.enabled | default false | quote }}
+        - name: TRACER_RATIO
+          value: {{ .Values.tracer.ratio | default "1" | quote }}
+        - name: COLLECTOR_ADDR
+          value: {{ .Values.tracer.addr | quote }}
 
         ports:
         - containerPort: {{ .Values.port | default 8080 }}

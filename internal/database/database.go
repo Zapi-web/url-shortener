@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Zapi-web/url-shortener/internal/domain"
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -31,6 +32,8 @@ func NewPostgres(ctx context.Context, connString string) (*Postgres, error) {
 		"application_name": "url-shortener",
 		"timezone":         "UTC",
 	}
+
+	config.ConnConfig.Tracer = otelpgx.NewTracer()
 
 	db, err := pgxpool.NewWithConfig(ctx, config)
 

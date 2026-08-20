@@ -14,6 +14,9 @@ services:
       - CONNECTION_STRING=postgres://postgres:password@db:5432/postgres?sslmode=disable
       - REDIS_ADDRS=cache:6379
       - AUTO_MIGRATE=true
+      - ENABLE_TRACES=true
+      - COLLECTOR_ADDR=jaeger:4317
+      - TRACER_RATIO=1.0
     depends_on:
           db:
             condition: service_healthy
@@ -43,3 +46,14 @@ services:
         interval: 3s
         timeout: 3s
         retries: 5
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # Web UI
+      - "4317:4317"   # OTLP gRPC (для вашего tracer.New)
+      - "4318:4318"   # OTLP HTTP
+    restart: unless-stopped

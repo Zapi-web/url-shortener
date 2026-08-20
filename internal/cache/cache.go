@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/Zapi-web/url-shortener/internal/domain"
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -22,6 +24,10 @@ func NewRedis(ctx context.Context, addrs []string, masterName string, password s
 		Password:         password,
 		SentinelPassword: password,
 	})
+
+	if err := redisotel.InstrumentTracing(rdb); err != nil {
+		slog.WarnContext(ctx, "failed to initialize tracer in redis, continuing without it", "err", err)
+	}
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("failed to ping a db %w", err)

@@ -12,6 +12,7 @@ image:
 
 replicas: 2
 logLevel: info
+environment: test
 port: 8080
 autoMigrate: true
 
@@ -30,6 +31,16 @@ resources:
 
 metrics:
   enabled: true
+
+
+# =======================
+# TRACER
+# =======================
+
+tracer:
+  enabled: true
+  ratio: 1
+  addr: otel-collector.monitoring.svc.cluster.local:4317
 
 # =======================
 # CACHE
