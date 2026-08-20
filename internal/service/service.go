@@ -8,6 +8,10 @@ import (
 	"time"
 
 	"github.com/Zapi-web/url-shortener/internal/domain"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Service struct {
@@ -16,6 +20,7 @@ type Service struct {
 	Encoder    Encoder
 	KGS        KGS
 	Metrics    Metrics
+	tracer     trace.Tracer
 	defaultTTL time.Duration
 }
 
@@ -26,11 +31,17 @@ func New(db Database, cache Cache, kgs KGS, encoder Encoder, metrics Metrics, tt
 		Encoder:    encoder,
 		KGS:        kgs,
 		Metrics:    metrics,
+		tracer:     otel.Tracer("url-shortener/service"),
 		defaultTTL: ttl,
 	}
 }
 
 func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (string, error) {
+	ctx, span := s.tracer.Start(ctx, "Service.Create",
+		trace.WithAttributes(attribute.Int64("user_id", int64(userID))),
+	)
+	defer span.End()
+
 	if longURL == "" {
 		return "", domain.ErrInputisEmpty
 	}
@@ -51,6 +62,9 @@ func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (st
 	err := s.Database.Set(ctx, &url)
 
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+
 		slog.ErrorContext(ctx, "failed to save url to database", "id", id, "user_id", userID, "err", err)
 		return "", fmt.Errorf("failed to set a url %d in database: %w", id, err)
 	}
@@ -76,6 +90,11 @@ func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (st
 }
 
 func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
+	ctx, span := s.tracer.Start(ctx, "Service.Get",
+		trace.WithAttributes(attribute.String("short_url", shortURL)),
+	)
+	defer span.End()
+
 	if shortURL == "" {
 		return "", domain.ErrInputisEmpty
 	}
@@ -111,6 +130,9 @@ func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
 			slog.DebugContext(ctx, "url not found in database", "short_url", shortURL, "decoded_id", decodedID)
 			return "", domain.ErrUrlNotFound
 		}
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.ErrorContext(ctx, "failed to query database for short url", "short_url", shortURL, "decoded_id", decodedID, "err", err)
 		return "", fmt.Errorf("failed to find short url in database: %w", err)
 	}

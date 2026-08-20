@@ -11,6 +11,10 @@ import (
 )
 
 type Config struct {
+	// App
+	AppName     string `env:"APP_NAME" env-default:"url-shortener"`
+	Environment string `env:"ENVIRONMENT" env-default:"test"`
+
 	// Server
 	Port            string        `env:"PORT" env-default:"8080"`
 	LogLevel        string        `env:"LOG_LEVEL" env-default:"info"`
@@ -30,6 +34,11 @@ type Config struct {
 	DbTTL       time.Duration `env:"DATABASE_TTL" env-default:"336h"`
 	ConnString  string        `env:"CONNECTION_STRING" env-required:"true"`
 	AutoMigrate bool          `env:"AUTO_MIGRATE" env-default:"false"`
+
+	// Tracer
+	TracesEnable  bool    `env:"ENABLE_TRACES" env-default:"false"`
+	CollectorAddr string  `env:"COLLECTOR_ADDR" env-default:""`
+	Ratio         float64 `env:"TRACER_RATIO" env-default:"1"`
 }
 
 func Init() (*Config, error) {

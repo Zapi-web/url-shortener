@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Zapi-web/url-shortener/internal/base62"
 	"github.com/Zapi-web/url-shortener/internal/cache"
@@ -17,6 +18,7 @@ import (
 	"github.com/Zapi-web/url-shortener/internal/metrics"
 	"github.com/Zapi-web/url-shortener/internal/server"
 	"github.com/Zapi-web/url-shortener/internal/service"
+	"github.com/Zapi-web/url-shortener/internal/tracer"
 )
 
 func main() {
@@ -87,6 +89,21 @@ func run() int {
 		prodMetrics = metrics.NewVM()
 	} else {
 		prodMetrics = metrics.NewFake()
+	}
+
+	if cfg.TracesEnable && cfg.CollectorAddr != "" && cfg.Ratio > 0 {
+		shutdown, err := tracer.New(ctx, cfg.AppName, cfg.Environment, cfg.CollectorAddr, cfg.Ratio)
+
+		if err != nil {
+			slog.Error("failed to inialize tracer, failover to work without tracer", "err", err)
+		}
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := shutdown(shutdownCtx); err != nil {
+				slog.Error("failed to shutdown otel tracer")
+			}
+		}()
 	}
 
 	shortener := service.New(postgresDB, appCache, kgs, encode, prodMetrics, cfg.DbTTL)
