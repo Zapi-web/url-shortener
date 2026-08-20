@@ -9,8 +9,15 @@ repositories:
     url: https://charts.jetstack.io
   - name: vector
     url: https://helm.vector.dev
+  - name: aws-ebs-csi-driver
+    url: https://kubernetes-sigs.github.io/aws-ebs-csi-driver
 
 releases:
+  - name: aws-ebs-csi-driver
+    namespace: kube-system
+    chart: aws-ebs-csi-driver/aws-ebs-csi-driver
+    version: 2.64.0
+
   - name: cnpg-operator
     namespace: cnpg-system
     createNamespace: true

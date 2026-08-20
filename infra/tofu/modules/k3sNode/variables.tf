@@ -36,6 +36,11 @@ variable "k3s_nodes_sg_id" {
   description = "K3s nodes security group ID"
 }
 
+variable "k3s_iam_instance_profile_name" {
+  type        = string
+  description = "IAM instance profile for EBS and Cluster Scale"
+}
+
 variable "key_name" {
   type        = string
   description = "SSH key"
