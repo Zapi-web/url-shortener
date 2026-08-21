@@ -5,41 +5,9 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
-
-type Config struct {
-	// App
-	AppName     string `env:"APP_NAME" env-default:"url-shortener"`
-	Environment string `env:"ENVIRONMENT" env-default:"test"`
-
-	// Server
-	Port            string        `env:"PORT" env-default:"8080"`
-	LogLevel        string        `env:"LOG_LEVEL" env-default:"info"`
-	NodeID          int64         `env:"NODE_ID" env-required:"true"`
-	ReadTimeout     time.Duration `env:"HTTP_READ_TIMEOUT" env-default:"5s"`
-	WriteTimeout    time.Duration `env:"HTTP_WRITE_TIMEOUT" env-default:"10s"`
-	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
-	MetricsEnable   bool          `env:"ENABLE_METRICS" env-default:"false"`
-
-	// Cache
-	RedisAddrs      []string      `env:"REDIS_ADDRS" env-default:"localhost:6379" env-separator:","`
-	RedisMasterName string        `env:"REDIS_MASTER_NAME" env-default:""`
-	RedisPassword   string        `env:"REDIS_PASSWORD" env-default:""`
-	CacheTTL        time.Duration `env:"CACHE_TTL" env-default:"24h"`
-
-	// Database
-	DbTTL       time.Duration `env:"DATABASE_TTL" env-default:"336h"`
-	ConnString  string        `env:"CONNECTION_STRING" env-required:"true"`
-	AutoMigrate bool          `env:"AUTO_MIGRATE" env-default:"false"`
-
-	// Tracer
-	TracesEnable  bool    `env:"ENABLE_TRACES" env-default:"false"`
-	CollectorAddr string  `env:"COLLECTOR_ADDR" env-default:""`
-	Ratio         float64 `env:"TRACER_RATIO" env-default:"1"`
-}
 
 func Init() (*Config, error) {
 	var cfg Config
@@ -64,26 +32,32 @@ func Init() (*Config, error) {
 }
 
 func (c *Config) Validate() error {
-	port, err := strconv.Atoi(c.Port)
+	port, err := strconv.Atoi(c.Server.Port)
 	if err != nil {
-		return fmt.Errorf("port is not a number %q: %w", c.Port, err)
+		return fmt.Errorf("port is not a number %q: %w", c.Server.Port, err)
 	}
 
 	if port < 1 || port > 65535 {
 		return fmt.Errorf("port is out-of-bounds %d", port)
 	}
 
-	if c.NodeID < 0 {
-		return fmt.Errorf("invalid NODE_ID %d: %w", c.NodeID, err)
+	if c.Server.NodeID < 0 {
+		return fmt.Errorf("invalid NODE_ID %d: %w", c.Server.NodeID, err)
 	}
 
 	return nil
 }
 
 func (c *Config) Normalize() {
-	validLogLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
-	if !validLogLevels[c.LogLevel] {
-		slog.Warn("invalid LOG_LEVEL, fallback to 'info'", "LOG_LEVEL", c.LogLevel)
-		c.LogLevel = "info"
+	validLogLevels := map[string]struct{}{"debug": {}, "info": {}, "warn": {}, "error": {}}
+	if _, ok := validLogLevels[c.App.LogLevel]; !ok {
+		slog.Warn("invalid LOG_LEVEL, fallback to 'info'", "LOG_LEVEL", c.App.LogLevel)
+		c.App.LogLevel = "info"
+	}
+
+	validEnvironments := map[string]struct{}{"test": {}, "dev": {}, "prod": {}}
+	if _, ok := validEnvironments[c.App.Environment]; !ok {
+		slog.Warn("invalid ENVIRONMENT, fallback to 'test", "ENVIRONMENT", c.App.Environment)
+		c.App.Environment = "test"
 	}
 }

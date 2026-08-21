@@ -13,39 +13,49 @@ func TestValidate(t *testing.T) {
 		{
 			name: "Clear Config",
 			testConfig: Config{
-				Port:   "8080",
-				NodeID: 1,
+				Server: ServerConfig{
+					Port:   "8080",
+					NodeID: 1,
+				},
 			},
 		},
 		{
 			name: "Invalid Non-Numeric Port",
 			testConfig: Config{
-				Port:   "bad-port",
-				NodeID: 1,
+				Server: ServerConfig{
+					Port:   "bad-port",
+					NodeID: 1,
+				},
 			},
 			expectError: true,
 		},
 		{
 			name: "Invalid Out-Of-Bounds Port",
 			testConfig: Config{
-				Port:   "65536",
-				NodeID: 1,
+				Server: ServerConfig{
+					Port:   "65536",
+					NodeID: 1,
+				},
 			},
 			expectError: true,
 		},
 		{
 			name: "Invalid Port 0",
 			testConfig: Config{
-				Port:   "0",
-				NodeID: 1,
+				Server: ServerConfig{
+					Port:   "0",
+					NodeID: 1,
+				},
 			},
 			expectError: true,
 		},
 		{
 			name: "Invalid Negative NodeID",
 			testConfig: Config{
-				Port:   "8080",
-				NodeID: -1,
+				Server: ServerConfig{
+					Port:   "8080",
+					NodeID: -1,
+				},
 			},
 			expectError: true,
 		},
@@ -92,11 +102,11 @@ func TestNormalize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testConfig := Config{LogLevel: tt.inputLevel}
+			testConfig := Config{App: AppConfig{LogLevel: tt.inputLevel}}
 			testConfig.Normalize()
 
-			if testConfig.LogLevel != tt.wantLogLevel {
-				t.Errorf("LogLevel = %q, want %q", testConfig.LogLevel, tt.wantLogLevel)
+			if testConfig.App.LogLevel != tt.wantLogLevel {
+				t.Errorf("LogLevel = %q, want %q", testConfig.App.LogLevel, tt.wantLogLevel)
 			}
 		})
 	}
