@@ -324,7 +324,7 @@ func TestServer_LifecycleAndShutdown(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", handlers.ServeHealthz)
 
-	srv := NewServer(port, mux, 1*time.Second, 1*time.Second, 1*time.Second)
+	srv := NewServer(port, mux, 1*time.Second, 1*time.Second)
 
 	errChan := make(chan error, 1)
 	go func() {
@@ -343,7 +343,7 @@ func TestServer_LifecycleAndShutdown(t *testing.T) {
 		t.Fatalf("Server; expected status 200, got %d", resp.StatusCode)
 	}
 
-	if err := srv.Shutdown(); err != nil {
+	if err := srv.Shutdown(t.Context()); err != nil {
 		t.Fatalf("Server.Shutdown unexpected error: %v", err)
 	}
 

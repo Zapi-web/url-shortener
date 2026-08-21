@@ -15,22 +15,22 @@ import (
 )
 
 type Service struct {
-	Database   Database
-	Cache      Cache
-	Encoder    Encoder
-	KGS        KGS
-	Metrics    Metrics
+	database   Database
+	cache      Cache
+	encoder    Encoder
+	kgs        KGS
+	metrics    Metrics
 	tracer     trace.Tracer
 	defaultTTL time.Duration
 }
 
 func New(db Database, cache Cache, kgs KGS, encoder Encoder, metrics Metrics, ttl time.Duration) *Service {
 	return &Service{
-		Database:   db,
-		Cache:      cache,
-		Encoder:    encoder,
-		KGS:        kgs,
-		Metrics:    metrics,
+		database:   db,
+		cache:      cache,
+		encoder:    encoder,
+		kgs:        kgs,
+		metrics:    metrics,
 		tracer:     otel.Tracer("url-shortener/service"),
 		defaultTTL: ttl,
 	}
@@ -49,7 +49,7 @@ func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (st
 		return "", domain.ErrInvalidInput
 	}
 
-	id := s.KGS.Generate()
+	id := s.kgs.Generate()
 
 	url := domain.URL{
 		ID:        id,
@@ -59,7 +59,7 @@ func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (st
 	}
 
 	now := time.Now()
-	err := s.Database.Set(ctx, &url)
+	err := s.database.Set(ctx, &url)
 
 	if err != nil {
 		span.RecordError(err)
@@ -69,22 +69,12 @@ func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (st
 		return "", fmt.Errorf("failed to set a url %d in database: %w", id, err)
 	}
 
-	s.Metrics.ObserveQueryDuration("create", time.Since(now))
+	s.metrics.ObserveQueryDuration("create", time.Since(now))
 	slog.DebugContext(ctx, "saved url to database", "id", url.ID, "user_id", userID)
 
-	encodedID := s.Encoder.Encode(url.ID)
+	encodedID := s.encoder.Encode(url.ID)
 
-	cacheCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
-
-	go func() {
-		defer cancel()
-
-		if err := s.Cache.Set(cacheCtx, encodedID, longURL); err != nil {
-			slog.WarnContext(cacheCtx, "failed to set record in cache", "key", encodedID, "err", err)
-			return
-		}
-		slog.DebugContext(cacheCtx, "set key-value in cache", "key", encodedID)
-	}()
+	s.cacheSet(ctx, encodedID, longURL)
 
 	return encodedID, nil
 }
@@ -100,30 +90,32 @@ func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
 	}
 
 	getCacheCtx, getCancel := context.WithTimeout(ctx, 1*time.Second)
-	res, err := s.Cache.Get(getCacheCtx, shortURL)
+	res, err := s.cache.Get(getCacheCtx, shortURL)
 	getCancel()
 
 	if err == nil {
 		slog.DebugContext(ctx, "retrieved url from cache", "key", shortURL)
-		s.Metrics.IncTotalCacheRequest("hit")
+		s.metrics.IncTotalCacheRequest("hit")
 		return res, nil
 	}
 
 	if errors.Is(err, domain.ErrUrlNotFound) {
-		s.Metrics.IncTotalCacheRequest("miss")
+		s.metrics.IncTotalCacheRequest("miss")
 	} else {
 		slog.WarnContext(ctx, "cache lookup failed, falling back to database", "key", shortURL, "err", err)
-		s.Metrics.IncTotalCacheRequest("error")
+		s.metrics.IncTotalCacheRequest("error")
 	}
 
-	decodedID, err := s.Encoder.Decode(shortURL)
+	decodedID, err := s.encoder.Decode(shortURL)
 
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return "", fmt.Errorf("failed to decode short url: %w", err)
 	}
 
 	start := time.Now()
-	url, err := s.Database.Get(ctx, decodedID)
+	url, err := s.database.Get(ctx, decodedID)
 
 	if err != nil {
 		if errors.Is(err, domain.ErrUrlNotFound) {
@@ -137,18 +129,26 @@ func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
 		return "", fmt.Errorf("failed to find short url in database: %w", err)
 	}
 
-	s.Metrics.ObserveQueryDuration("get", time.Since(start))
+	s.metrics.ObserveQueryDuration("get", time.Since(start))
 
-	cacheCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
-	go func() {
-		defer cancel()
-		if err := s.Cache.Set(cacheCtx, shortURL, url.LongURL); err != nil {
-			slog.WarnContext(cacheCtx, "failed to set a key-value record to a cache", "key", shortURL, "err", err)
-			return
-		}
-
-		slog.DebugContext(cacheCtx, "populated cache on miss fallback", "key", shortURL)
-	}()
+	s.cacheSet(ctx, shortURL, url.LongURL)
 
 	return url.LongURL, nil
+}
+
+func (s *Service) cacheSet(ctx context.Context, key, value string) {
+	err := s.cache.Set(ctx, key, value)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrQueueClosed):
+			slog.DebugContext(ctx, "queue is closed, dropping the key-value")
+		case errors.Is(err, domain.ErrQueueFull):
+			slog.WarnContext(ctx, "queue is full, can't send a key-value to cache")
+		default:
+			slog.ErrorContext(ctx, "unknown error occurred when sending key-value to cache", "err", err)
+		}
+	} else {
+		slog.DebugContext(ctx, "send key-value to queue", "key", key)
+	}
 }

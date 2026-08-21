@@ -21,6 +21,10 @@ server:
   writeTimeout: 10s
   shutdownTimeout: 5s
 
+workersCount: 5
+chanBuffer: 1000
+shutdownTimeout: "3s"
+
 resources:
   limits:
     cpu: 300m

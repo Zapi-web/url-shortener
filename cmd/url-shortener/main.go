@@ -55,17 +55,31 @@ func run() int {
 
 	slog.Info("Database initialized")
 
-	var appCache service.Cache
+	var (
+		appCache   service.Cache
+		asyncCache *cache.AsyncCache
+	)
 
 	redisCache, err := cache.NewRedis(ctx, cfg.Cache.RedisAddrs, cfg.Cache.RedisMasterName, cfg.Cache.RedisPassword, cfg.Cache.CacheTTL)
 	if err != nil {
 		slog.Warn("Failed to connect to a cache, fallback to only database pattern", "err", err)
 		appCache = cache.NewFake()
 	} else {
-		appCache = redisCache
+		asyncCache = cache.NewAsync(redisCache, cfg.App.ChanBuffer)
+		asyncCache.StartAsync(cfg.App.WorkersCount)
+		appCache = asyncCache
 		defer func() {
+			appShutdownCtx, appCancel := context.WithTimeout(context.Background(), cfg.App.ShutdownTimeout)
+			defer appCancel()
+
+			if asyncCache != nil {
+				if err := asyncCache.Stop(appShutdownCtx); err != nil {
+					slog.Error("failed to shutdown async cache workers", "err", err)
+				}
+			}
+
 			if err := redisCache.Close(); err != nil {
-				slog.Error("failed to close redis", "err", err)
+				slog.Error("failed to close redis connection", "err", err)
 			}
 		}()
 	}
@@ -95,7 +109,7 @@ func run() int {
 		shutdown, err := tracer.New(ctx, cfg.App.AppName, cfg.App.Environment, cfg.Tracer.CollectorAddr, cfg.Tracer.Ratio)
 
 		if err != nil {
-			slog.Error("failed to inialize tracer, failover to work without tracer", "err", err)
+			slog.Error("failed to initialize tracer, failover to work without tracer", "err", err)
 		}
 		defer func() {
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -123,7 +137,7 @@ func run() int {
 		rootHandler = mv.MetricsMiddleware(mux)
 	}
 
-	httpServer := server.NewServer(cfg.Server.Port, rootHandler, cfg.Server.ReadTimeout, cfg.Server.WriteTimeout, cfg.Server.ShutdownTimeout)
+	httpServer := server.NewServer(cfg.Server.Port, rootHandler, cfg.Server.ReadTimeout, cfg.Server.WriteTimeout)
 	serverError := make(chan error, 1)
 	go func() {
 		serverError <- httpServer.RunServer()
@@ -133,14 +147,16 @@ func run() int {
 	case err := <-serverError:
 		if err != nil {
 			slog.Error("received an error from http server", "err", err)
-			stop()
 			return 1
 		}
 	case <-ctx.Done():
 		slog.Info("received a signal, starting graceful shutdown")
-		if err := httpServer.Shutdown(); err != nil {
+
+		srvShutdownCtx, srvCancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
+		defer srvCancel()
+
+		if err := httpServer.Shutdown(srvShutdownCtx); err != nil {
 			slog.Error("failed to shutdown server", "err", err)
-			return 1
 		}
 	}
 
