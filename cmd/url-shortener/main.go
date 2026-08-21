@@ -33,20 +33,20 @@ func run() int {
 		return 1
 	}
 
-	slog.SetDefault(logger.NewLogger(cfg.LogLevel))
-	slog.Info("Logger initialized", "level", cfg.LogLevel)
+	slog.SetDefault(logger.NewLogger(cfg.App.LogLevel))
+	slog.Info("Logger initialized", "level", cfg.App.LogLevel)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	postgresDB, err := database.NewPostgres(ctx, cfg.ConnString)
+	postgresDB, err := database.NewPostgres(ctx, cfg.Database.ConnString)
 	if err != nil {
 		slog.Error("failed to connect to a database", "err", err)
 		return 1
 	}
 	defer postgresDB.Close()
 
-	if cfg.AutoMigrate {
+	if cfg.Database.AutoMigrate {
 		if err = postgresDB.Migrate(ctx); err != nil {
 			slog.Error("failed to perform migration", "err", err)
 			return 1
@@ -57,7 +57,7 @@ func run() int {
 
 	var appCache service.Cache
 
-	redisCache, err := cache.NewRedis(ctx, cfg.RedisAddrs, cfg.RedisMasterName, cfg.RedisPassword, cfg.CacheTTL)
+	redisCache, err := cache.NewRedis(ctx, cfg.Cache.RedisAddrs, cfg.Cache.RedisMasterName, cfg.Cache.RedisPassword, cfg.Cache.CacheTTL)
 	if err != nil {
 		slog.Warn("Failed to connect to a cache, fallback to only database pattern", "err", err)
 		appCache = cache.NewFake()
@@ -72,7 +72,7 @@ func run() int {
 
 	slog.Info("Cache initialized")
 
-	kgs, err := kgs.New(cfg.NodeID)
+	kgs, err := kgs.New(cfg.Server.NodeID)
 	if err != nil {
 		slog.Error("failed to make an kgs", "err", err)
 		return 1
@@ -85,14 +85,14 @@ func run() int {
 		server.Metrics
 	}
 
-	if cfg.MetricsEnable {
+	if cfg.App.MetricsEnable {
 		prodMetrics = metrics.NewVM()
 	} else {
 		prodMetrics = metrics.NewFake()
 	}
 
-	if cfg.TracesEnable && cfg.CollectorAddr != "" && cfg.Ratio > 0 {
-		shutdown, err := tracer.New(ctx, cfg.AppName, cfg.Environment, cfg.CollectorAddr, cfg.Ratio)
+	if cfg.Tracer.TracesEnable && cfg.Tracer.CollectorAddr != "" && cfg.Tracer.Ratio > 0 {
+		shutdown, err := tracer.New(ctx, cfg.App.AppName, cfg.App.Environment, cfg.Tracer.CollectorAddr, cfg.Tracer.Ratio)
 
 		if err != nil {
 			slog.Error("failed to inialize tracer, failover to work without tracer", "err", err)
@@ -106,7 +106,7 @@ func run() int {
 		}()
 	}
 
-	shortener := service.New(postgresDB, appCache, kgs, encode, prodMetrics, cfg.DbTTL)
+	shortener := service.New(postgresDB, appCache, kgs, encode, prodMetrics, cfg.Database.DbTTL)
 	handler := server.NewHandlers(shortener)
 	mv := server.NewMiddleware(prodMetrics)
 
@@ -114,16 +114,16 @@ func run() int {
 	mux.HandleFunc("GET /healthz", handler.ServeHealthz)
 	mux.HandleFunc("POST /api/v1/", handler.ServeSaveUrl)
 	mux.HandleFunc("GET /{id}", handler.ServeGetURL)
-	if cfg.MetricsEnable {
+	if cfg.App.MetricsEnable {
 		mux.HandleFunc("GET /metrics", metrics.ExposeMetrics)
 	}
 
 	var rootHandler http.Handler = mux
-	if cfg.MetricsEnable {
+	if cfg.App.MetricsEnable {
 		rootHandler = mv.MetricsMiddleware(mux)
 	}
 
-	httpServer := server.NewServer(cfg.Port, rootHandler, cfg.ReadTimeout, cfg.WriteTimeout, cfg.ShutdownTimeout)
+	httpServer := server.NewServer(cfg.Server.Port, rootHandler, cfg.Server.ReadTimeout, cfg.Server.WriteTimeout, cfg.Server.ShutdownTimeout)
 	serverError := make(chan error, 1)
 	go func() {
 		serverError <- httpServer.RunServer()
