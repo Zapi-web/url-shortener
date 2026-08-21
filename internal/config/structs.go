@@ -11,10 +11,13 @@ type Config struct {
 }
 
 type AppConfig struct {
-	AppName       string `env:"APP_NAME" env-default:"url-shortener"`
-	Environment   string `env:"ENVIRONMENT" env-default:"test"`
-	MetricsEnable bool   `env:"ENABLE_METRICS" env-default:"false"`
-	LogLevel      string `env:"LOG_LEVEL" env-default:"info"`
+	AppName         string        `env:"APP_NAME" env-default:"url-shortener"`
+	Environment     string        `env:"ENVIRONMENT" env-default:"test"`
+	MetricsEnable   bool          `env:"ENABLE_METRICS" env-default:"false"`
+	LogLevel        string        `env:"LOG_LEVEL" env-default:"info"`
+	ShutdownTimeout time.Duration `env:"APP_SHUTDOWN_TIMEOUT" env-default:"3s"`
+	WorkersCount    int           `env:"WORKERS_COUNT" env-default:"5"`
+	ChanBuffer      int           `env:"CHAN_BUFFER" env-default:"1000"`
 }
 
 type ServerConfig struct {
@@ -22,7 +25,7 @@ type ServerConfig struct {
 	NodeID          int64         `env:"NODE_ID" env-required:"true"`
 	ReadTimeout     time.Duration `env:"HTTP_READ_TIMEOUT" env-default:"5s"`
 	WriteTimeout    time.Duration `env:"HTTP_WRITE_TIMEOUT" env-default:"10s"`
-	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
+	ShutdownTimeout time.Duration `env:"SERVER_SHUTDOWN_TIMEOUT" env-default:"2s"`
 }
 
 type DatabaseConfig struct {

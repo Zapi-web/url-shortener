@@ -10,11 +10,10 @@ import (
 )
 
 type Server struct {
-	srv             *http.Server
-	shutdownTimeout time.Duration
+	srv *http.Server
 }
 
-func NewServer(port string, handler http.Handler, readTimeout, writeTimeout, shutdownTimeout time.Duration) *Server {
+func NewServer(port string, handler http.Handler, readTimeout, writeTimeout time.Duration) *Server {
 	return &Server{
 		srv: &http.Server{
 			Addr:         ":" + port,
@@ -23,7 +22,6 @@ func NewServer(port string, handler http.Handler, readTimeout, writeTimeout, shu
 			WriteTimeout: writeTimeout,
 			IdleTimeout:  120 * time.Second,
 		},
-		shutdownTimeout: shutdownTimeout,
 	}
 }
 
@@ -37,13 +35,10 @@ func (s *Server) RunServer() error {
 	return err
 }
 
-func (s *Server) Shutdown() error {
+func (s *Server) Shutdown(ctx context.Context) error {
 	slog.Info("starting graceful shutdown of http server")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
-	defer cancel()
-
-	if err := s.srv.Shutdown(shutdownCtx); err != nil {
+	if err := s.srv.Shutdown(ctx); err != nil {
 		if closeErr := s.srv.Close(); closeErr != nil {
 			return fmt.Errorf("failed to force-shutdown HTTP server: %w", closeErr)
 		}
