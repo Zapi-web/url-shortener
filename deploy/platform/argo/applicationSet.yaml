@@ -1,0 +1,96 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cluster-platform
+  namespace: argo-cd
+spec:
+  strategy:
+    type: RollingSync
+    rollingSync:
+      steps:
+        - matchExpressions:
+            - key: step
+              operator: In
+              values: ["0"]
+        - matchExpressions:
+            - key: step
+              operator: In
+              values: ["1"]
+  generators:
+    - list:
+        elements:
+          #- name: "aws-ebs-csi-driver"
+          #  namespace: "kube-system"
+          #  repoURL: "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
+          #  chart: "aws-ebs-csi-driver"
+          #  targetRevision: "2.64.0"
+          #  step: "0"
+          #s  valuesPath: "deploy/platform/values/aws-ebs-csi-driver.yaml"
+
+          - name: "cnpg-operator"
+            namespace: "cnpg-system"
+            repoURL: "https://cloudnative-pg.github.io/charts"
+            chart: "cloudnative-pg"
+            targetRevision: "0.28.0"
+            step: "0"
+            valuesPath: "deploy/platform/values/cnpg-operator.yaml"
+
+          - name: "cert-manager"
+            namespace: "cert-manager"
+            repoURL: "https://charts.jetstack.io"
+            chart: "cert-manager"
+            targetRevision: "v1.14.0"
+            step: "0"
+            valuesPath: "deploy/platform/values/cert-manager.yaml"
+
+          - name: "victoria-metrics"
+            namespace: "monitoring"
+            repoURL: "https://victoriametrics.github.io/helm-charts/"
+            chart: "victoria-metrics-k8s-stack"
+            targetRevision: "0.89.0"
+            step: "1"
+            valuesPath: "deploy/platform/values/victoria-metrics.yaml"
+
+          - name: "opentelemetry-operator"
+            namespace: "opentelemetry"
+            repoURL: "https://open-telemetry.github.io/opentelemetry-helm-charts"
+            chart: "opentelemetry-operator"
+            targetRevision: "0.122.0"
+            step: "1"
+            valuesPath: "deploy/platform/values/open-telemetry-op.yaml"
+
+          - name: "vector"
+            namespace: "monitoring"
+            repoURL: "https://helm.vector.dev"
+            chart: "vector"
+            targetRevision: "0.57.0"
+            step: "1"
+            valuesPath: "deploy/platform/values/vector.yaml"
+  template:
+    metadata:
+      name: "{{name}}"
+      labels:
+        step: "{{step}}"
+    spec:
+      project: "default"
+      sources:
+        - repoURL: "{{repoURL}}"
+          chart: "{{chart}}"
+          targetRevision: "{{targetRevision}}"
+          helm:
+            valueFiles:
+              - "$values/{{valuesPath}}"
+        - repoURL: "https://github.com/Zapi-web/url-shortener"
+          targetRevision: "main"
+          ref: "values"
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: "{{namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true
