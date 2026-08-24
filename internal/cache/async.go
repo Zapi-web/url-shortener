@@ -79,8 +79,8 @@ func (a *AsyncCache) Stop(ctx context.Context) error {
 	a.stopOnce.Do(func() {
 		a.mu.Lock()
 		a.isClosed = true
-		a.mu.Unlock()
 		close(a.tasks)
+		a.mu.Unlock()
 	})
 
 	done := make(chan struct{})

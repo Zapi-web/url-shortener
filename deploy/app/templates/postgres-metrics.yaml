@@ -1,0 +1,19 @@
+{{- if and .Values.postgresql.monitoring.enabled .Values.postgresql.monitoring.customMetrics.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-postgres-custom-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: url-shortener
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  queries.yaml: |
+    pg_urls_count:
+      query: "SELECT reltuples::bigint AS total_urls FROM pg_class WHERE relname = 'urls';"
+      metrics:
+        - total_urls:
+            usage: "GAUGE"
+            description: "Estimated total count of generated URLs"
+{{- end }}

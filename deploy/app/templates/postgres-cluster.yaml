@@ -55,6 +55,11 @@ spec:
 
     monitoring:
         enablePodMonitor: {{ .Values.postgresql.monitoring.enabled | default false }}
+        {{- if .Values.postgresql.monitoring.customMetrics.enabled }}
+        customQueriesConfigMap:
+          - name: {{ .Release.Name }}-postgres-custom-metrics
+            key: queries.yaml
+        {{- end }}
     
     affinity:
         enablePodAntiAffinity: true

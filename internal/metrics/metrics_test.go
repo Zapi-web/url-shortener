@@ -15,6 +15,10 @@ func TestVictoriaMetrics_ExposeMetrics(t *testing.T) {
 	vm.ObserveRequestDuration("/", http.StatusFound, 150*time.Millisecond)
 	vm.IncTotalCacheRequest("hit")
 	vm.ObserveQueryDuration("Get", 150*time.Millisecond)
+	vm.IncUrlsCreated()
+	vm.IncInFlight("Get")
+	vm.IncInFlight("Get")
+	vm.DecInFlight("Get")
 
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	rec := httptest.NewRecorder()
@@ -32,6 +36,8 @@ func TestVictoriaMetrics_ExposeMetrics(t *testing.T) {
 		`cache_requests_total{cache_status="hit"}`,
 		`request_durations_seconds_bucket{handler="/",status="302"`,
 		`query_duration_seconds_bucket{handler="Get"`,
+		`urls_created_total{`,
+		`in_flight_requests{handler="Get"`,
 	}
 
 	for _, str := range expectedStrings {

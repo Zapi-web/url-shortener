@@ -81,6 +81,9 @@ func (m *mockKGS) Generate() uint64 {
 type mockMetrics struct {
 	incTotalCacheRequestFunc func(cacheStatus string)
 	observeQueryDurationFunc func(handler string, duration time.Duration)
+	incUrlsCreated           func()
+	incInFlight              func(handler string)
+	decInFlight              func(handler string)
 }
 
 func (m *mockMetrics) IncTotalCacheRequest(cacheStatus string) {
@@ -92,5 +95,23 @@ func (m *mockMetrics) IncTotalCacheRequest(cacheStatus string) {
 func (m *mockMetrics) ObserveQueryDuration(handler string, duration time.Duration) {
 	if m.observeQueryDurationFunc != nil {
 		m.observeQueryDurationFunc(handler, duration)
+	}
+}
+
+func (m *mockMetrics) IncUrlsCreated() {
+	if m.incUrlsCreated != nil {
+		m.incUrlsCreated()
+	}
+}
+
+func (m *mockMetrics) IncInFlight(handler string) {
+	if m.incInFlight != nil {
+		m.incInFlight(handler)
+	}
+}
+
+func (m *mockMetrics) DecInFlight(handler string) {
+	if m.decInFlight != nil {
+		m.decInFlight(handler)
 	}
 }

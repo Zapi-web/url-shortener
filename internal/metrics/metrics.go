@@ -19,6 +19,20 @@ func (m *VictoriaMetrics) IncTotalRequests(handler string, status int) {
 	metrics.GetOrCreateCounter(name).Inc()
 }
 
+func (m *VictoriaMetrics) IncUrlsCreated() {
+	metrics.GetOrCreateCounter("urls_created_total").Inc()
+}
+
+func (m *VictoriaMetrics) IncInFlight(handler string) {
+	name := fmt.Sprintf(`in_flight_requests{handler="%s"}`, handler)
+	metrics.GetOrCreateGauge(name, nil).Inc()
+}
+
+func (m *VictoriaMetrics) DecInFlight(handler string) {
+	name := fmt.Sprintf(`in_flight_requests{handler="%s"}`, handler)
+	metrics.GetOrCreateGauge(name, nil).Dec()
+}
+
 func (m *VictoriaMetrics) ObserveRequestDuration(handler string, status int, duration time.Duration) {
 	name := fmt.Sprintf(`request_durations_seconds{handler="%s",status="%d"}`, handler, status)
 	metrics.GetOrCreateHistogram(name).Update(duration.Seconds())

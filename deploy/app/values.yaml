@@ -21,8 +21,8 @@ server:
   writeTimeout: 10s
   shutdownTimeout: 5s
 
-workersCount: 5
-chanBuffer: 1000
+workersCount: 20
+chanBuffer: 15000
 shutdownTimeout: "3s"
 
 resources:
@@ -145,6 +145,8 @@ postgresql:
 
   monitoring:
     enabled: true
+    customMetrics:
+      enabled: true
 
   topologyKey: kubernetes.io/hostname
 

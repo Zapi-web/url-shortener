@@ -37,6 +37,9 @@ func New(db Database, cache Cache, kgs KGS, encoder Encoder, metrics Metrics, tt
 }
 
 func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (string, error) {
+	s.metrics.IncInFlight("create")
+	defer s.metrics.DecInFlight("create")
+
 	ctx, span := s.tracer.Start(ctx, "Service.Create",
 		trace.WithAttributes(attribute.Int64("user_id", int64(userID))),
 	)
@@ -76,10 +79,15 @@ func (s *Service) Create(ctx context.Context, longURL string, userID uint64) (st
 
 	s.cacheSet(ctx, encodedID, longURL)
 
+	s.metrics.IncUrlsCreated()
+
 	return encodedID, nil
 }
 
 func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
+	s.metrics.IncInFlight("get")
+	defer s.metrics.DecInFlight("get")
+
 	ctx, span := s.tracer.Start(ctx, "Service.Get",
 		trace.WithAttributes(attribute.String("short_url", shortURL)),
 	)
@@ -132,6 +140,8 @@ func (s *Service) Get(ctx context.Context, shortURL string) (string, error) {
 	s.metrics.ObserveQueryDuration("get", time.Since(start))
 
 	s.cacheSet(ctx, shortURL, url.LongURL)
+
+	s.metrics.IncUrlsCreated()
 
 	return url.LongURL, nil
 }
