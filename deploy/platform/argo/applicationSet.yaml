@@ -19,13 +19,13 @@ spec:
   generators:
     - list:
         elements:
-          #- name: "aws-ebs-csi-driver"
-          #  namespace: "kube-system"
-          #  repoURL: "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
-          #  chart: "aws-ebs-csi-driver"
-          #  targetRevision: "2.64.0"
-          #  step: "0"
-          #s  valuesPath: "deploy/platform/values/aws-ebs-csi-driver.yaml"
+          - name: "aws-ebs-csi-driver"
+            namespace: "kube-system"
+            repoURL: "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
+            chart: "aws-ebs-csi-driver"
+            targetRevision: "2.64.0"
+            step: "0"
+            valuesPath: "deploy/platform/values/aws-ebs-csi-driver.yaml"
 
           - name: "cnpg-operator"
             namespace: "cnpg-system"

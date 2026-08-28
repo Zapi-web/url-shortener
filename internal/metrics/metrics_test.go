@@ -36,7 +36,7 @@ func TestVictoriaMetrics_ExposeMetrics(t *testing.T) {
 		`cache_requests_total{cache_status="hit"}`,
 		`request_durations_seconds_bucket{handler="/",status="302"`,
 		`query_duration_seconds_bucket{handler="Get"`,
-		`urls_created_total{`,
+		`urls_created_total`,
 		`in_flight_requests{handler="Get"`,
 	}
 
