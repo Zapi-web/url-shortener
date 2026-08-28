@@ -34,7 +34,7 @@ start-local-k3d-argo:
 	kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml && kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
 
 	@echo "Deploy platform"
-	cd deploy/platform && kubectl apply -f argo/applicationSet.yaml
+	cd deploy/platform && kubectl apply -f argo/applicationSet.yaml && kubectl apply -f argo/monitoringDashboard.yaml
 
 	@echo "Deploy App"
 	cd deploy/platform && kubectl apply -f argo/application.yaml
