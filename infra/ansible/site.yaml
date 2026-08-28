@@ -1,4 +1,3 @@
----
 - name: Prepare servers
   hosts: server
   become: true
@@ -8,4 +7,15 @@
 - ansible.builtin.import_playbook: k3s.orchestration.site
   vars:
     k3s_version: "v1.35.7+k3s1"
-    api_endpoint: "{{ hostvars[groups['server'][0]]['ansible_host'] }}"
+    api_endpoint: "{{ hostvars[groups['server'][0]]['private_ip'] }}"
+    extra_server_args: >-
+      --node-ip={{ private_ip }}
+      --advertise-address={{ private_ip }}
+      --tls-san={{ ansible_host }}
+      --tls-san={{ private_ip }}
+
+- name: Apply manifests
+  hosts: server[0]
+  become: true
+  roles:
+    - helm

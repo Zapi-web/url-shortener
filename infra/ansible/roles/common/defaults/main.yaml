@@ -6,3 +6,6 @@ common_base_packages:
   - iptables
   - open-iscsi
   - nfs-common
+  - ca-certificates
+  - gnupg
+  - apt-transport-https
