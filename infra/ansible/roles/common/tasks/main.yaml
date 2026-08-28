@@ -4,6 +4,9 @@
     state: present
     update_cache: true
 
+- name: Install Helm
+  ansible.builtin.include_tasks: helm.yaml
+
 - name: Ensure iscsid service is enabled and running
   ansible.builtin.systemd:
     name: iscsid

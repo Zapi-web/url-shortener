@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
   name: cluster-platform
-  namespace: argo-cd
+  namespace: argocd
 spec:
   strategy:
     type: RollingSync
@@ -71,6 +71,8 @@ spec:
       name: "{{name}}"
       labels:
         step: "{{step}}"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
     spec:
       project: "default"
       sources:
