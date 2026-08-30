@@ -22,7 +22,7 @@ resource "aws_lb_target_group" "load_balancer_trg" {
     path                = "/ping"
     port                = "traffic-port"
     protocol            = "HTTP"
-    matcher             = "200-399"
+    matcher             = "200-399,404"
     interval            = 30
     healthy_threshold   = 2
     unhealthy_threshold = 5
