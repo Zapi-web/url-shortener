@@ -55,5 +55,8 @@ customConfig:
       framing:
         method: newline_delimited
       compression: gzip
+      batch:
+        max_bytes: 1048576
+        timeout_secs: 1
       healthcheck:
         enabled: false

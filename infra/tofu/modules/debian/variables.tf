@@ -8,3 +8,9 @@ variable "debian_version" {
     error_message = "Only 11-13 versions"
   }
 }
+
+variable "arm_instance" {
+  type        = bool
+  description = "Do you use ARM instance"
+  default     = false
+}

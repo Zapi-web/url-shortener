@@ -1,3 +1,8 @@
+locals {
+  arch_name = var.arm_instance ? "arm64" : "amd64"
+  arch_ec2  = var.arm_instance ? "arm64" : "x86_64"
+}
+
 data "aws_ami" "debian" {
   for_each = toset(["11", "12", "13"])
 
@@ -6,7 +11,7 @@ data "aws_ami" "debian" {
 
   filter {
     name   = "name"
-    values = ["debian-${each.value}-amd64-*"]
+    values = ["debian-${each.value}-${local.arch_name}-*"]
   }
 
   filter {
@@ -16,6 +21,11 @@ data "aws_ami" "debian" {
 
   filter {
     name   = "architecture"
-    values = ["x86_64"]
+    values = [local.arch_ec2]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
   }
 }

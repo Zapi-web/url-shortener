@@ -1,0 +1,31 @@
+{{- if .Values.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+    name: {{ .Release.Name }}-hpa
+    namespace: {{ .Release.Namespace }}
+    labels:
+        app.kubernetes.io/name: url-shortener
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+    scaleTargetRef:
+        apiVersion: apps/v1
+        kind: StatefulSet
+        name: {{ .Release.Name }}-stateful-set
+    minReplicas: {{ .Values.hpa.minReplicas | default .Values.replicas | default 2 }}
+    maxReplicas: {{ .Values.hpa.maxReplicas | default 10 }}
+    metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+            type: Utilization
+            averageUtilization: {{ .Values.hpa.cpuUtilization | default 75}}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+            type: Utilization
+            averageUtilization: {{ .Values.hpa.memoryUtilization | default 80 }}
+{{- end }}

@@ -36,6 +36,12 @@ variable "admin_ip" {
   }
 }
 
+variable "arm_instance" {
+  type        = bool
+  description = "Do you use ARM instance"
+  default     = false
+}
+
 variable "instances_type" {
   type        = string
   description = "Instance type"
