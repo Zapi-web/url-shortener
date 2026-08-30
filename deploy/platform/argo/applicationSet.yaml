@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: cluster-platform
+  name: cluster-platform-helm
   namespace: argocd
 spec:
   strategy:
