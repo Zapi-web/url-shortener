@@ -8,6 +8,7 @@ module "vpc" {
 module "debian" {
   source = "./modules/debian"
 
+  arm_instance   = var.arm_instance
   debian_version = var.debian_version
 }
 

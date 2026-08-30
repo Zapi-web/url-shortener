@@ -7,23 +7,23 @@ service:
 
 image:
   repository: ghcr.io/zapi-web/url-shortener
-  tag: local # CHANGE
-  pullPolicy: Never
+  tag: latest
+  pullPolicy: IfNotPresent
 
-replicas: 2
+replicas: 3
 logLevel: info
-environment: test
+environment: prod
 port: 8080
 autoMigrate: true
 
 server:
   readTimeout: 5s
   writeTimeout: 10s
-  shutdownTimeout: 5s
+  shutdownTimeout: 10s
 
 workersCount: 20
 chanBuffer: 15000
-shutdownTimeout: "3s"
+shutdownTimeout: "5s"
 
 resources:
   limits:
@@ -36,6 +36,12 @@ resources:
 metrics:
   enabled: true
 
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  cpuUtilization: 75
+  memoryUtilization: 80
 
 # =======================
 # TRACER
@@ -43,7 +49,7 @@ metrics:
 
 tracer:
   enabled: true
-  ratio: 1
+  ratio: 0.1
   addr: otel-collector.monitoring.svc.cluster.local:4317
 
 # =======================
@@ -74,10 +80,10 @@ redis:
     persistence:
       enabled: true
       size: 8Gi
-      storageClass: local-path
+      storageClass: gp3
   
   replica:
-    replicaCount: 1
+    replicaCount: 2
     resources:
       requests:
         memory: "512Mi"
@@ -88,7 +94,7 @@ redis:
     persistence:
       enabled: true
       size: 8Gi
-      storageClass: local-path
+      storageClass: gp3
 
   sentinel:
     enabled: true
@@ -114,7 +120,7 @@ redis:
 
 postgresql:
   enabled: true
-  instances: 2
+  instances: 3
   image:
     repository: ghcr.io/cloudnative-pg/postgresql
     tag: 18 # CHANGE
@@ -124,8 +130,8 @@ postgresql:
 
   storage:
     size: 20Gi
-    storageClass: local-path
-
+    storageClass: gp3
+  
   backup:
     enabled: false
     retentionPolicy: 14d
@@ -148,7 +154,7 @@ postgresql:
     customMetrics:
       enabled: true
 
-  topologyKey: kubernetes.io/hostname
+  topologyKey: topology.kubernetes.io/zone
 
   resources:
     requests:
