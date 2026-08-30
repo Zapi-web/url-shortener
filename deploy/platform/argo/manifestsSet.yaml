@@ -1,0 +1,68 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cluster-platform-manifests
+  namespace: argocd
+spec:
+  strategy:
+    type: RollingSync
+    rollingSync:
+      steps:
+        - matchExpressions:
+            - key: step
+              operator: In
+              values: ["0"]
+        - matchExpressions:
+            - key: step
+              operator: In
+              values: ["1"]
+        - matchExpressions:
+            - key: step
+              operator: In
+              values: ["2"]
+  generators:
+    - list:
+        elements:
+          - name: "aws-ebs-csi-driver-manifest"
+            namespace: "kube-system"
+            path: "deploy/platform/manifests"
+            includeFile: "aws-ebs-csi.yaml"
+            step: "0"
+
+          - name: "otel-collector"
+            namespace: "monitoring"
+            path: "deploy/platform/manifests"
+            includeFile: "otel-collector.yaml"
+            step: "1"
+
+          - name: "monitoring-dashboards"
+            namespace: "monitoring"
+            path: "deploy/platform/dashboard"
+            includeFile: "*.yaml"
+            step: "2"
+  template:
+    metadata:
+      name: "{{name}}"
+      labels:
+        step: "{{step}}"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: "default"
+      source:
+        repoURL: "https://github.com/Zapi-web/url-shortener"
+        targetRevision: "main"
+        path: "{{path}}"
+        directory:
+          include: "{{includeFile}}"
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: "{{namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true
