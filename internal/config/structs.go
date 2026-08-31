@@ -31,7 +31,6 @@ type ServerConfig struct {
 type DatabaseConfig struct {
 	DbTTL             time.Duration `env:"DATABASE_TTL" env-default:"336h"`
 	ConnString        string        `env:"CONNECTION_STRING" env-required:"true"`
-	AutoMigrate       bool          `env:"AUTO_MIGRATE" env-default:"false"`
 	MaxConns          int32         `env:"MAX_CONNS" env-default:"25"`
 	MinConns          int32         `env:"MIN_CONNS" env-default:"5"`
 	MaxConnLifeTime   time.Duration `env:"MAX_CONN_LIFETIME" env-default:"1h"`

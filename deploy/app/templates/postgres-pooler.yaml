@@ -1,0 +1,23 @@
+{{- if and .Values.postgresql.enabled .Values.postgresql.pooler.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+    name: {{ .Release.Name }}-postgres-pooler
+    namespace: {{ .Release.Namespace }}
+    labels:
+        app.kubernetes.io/name: url-shortener
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+    cluster:
+        name: {{ .Release.Name }}-postgres
+    instances: {{ .Values.postgresql.pooler.instances }}
+    type: rw
+    pgbouncer:
+        poolMode: {{ .Values.postgresql.pooler.poolMode }}
+        parameters:
+            max_client_conn: {{ .Values.postgresql.pooler.maxClientConn | quote }}
+            default_pool_size: {{ .Values.postgresql.pooler.defaultPoolSize | quote }}
+            reserve_pool_size: {{ .Values.postgresql.pooler.reservePoolSize | quote }}
+            max_db_connections: {{ .Values.postgresql.pooler.maxDBConnections | quote }}
+{{- end }}

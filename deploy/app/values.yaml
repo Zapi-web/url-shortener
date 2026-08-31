@@ -163,10 +163,19 @@ postgresql:
     limits:
       memory: 2Gi
       cpu: 1000m
+  
+  pooler:
+    enabled: true
+    instances: 2
+    poolMode: transaction
+    maxClientConn: 1000
+    defaultPoolSize: 25
+    reservePoolSize: 5
+    maxDBConnections: 50
 
 database:
-  maxConns: 25
-  minConns: 5
+  maxConns: 10
+  minConns: 3
   maxConnLifetime: 1h
   maxConnIdletime: 30m
   healthCheckPeriod: 1m

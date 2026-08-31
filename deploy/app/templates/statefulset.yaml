@@ -8,6 +8,7 @@ metadata:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
+  serviceName: {{ .Release.Name }}-headless
   podManagementPolicy: Parallel
   replicas: {{ .Values.replicas | default 2 }}
   selector:
@@ -24,6 +25,30 @@ spec:
         app.kubernetes.io/name: url-shortener
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+
+      initContainers:
+      {{- if .Values.postgresql.enabled }}
+      - name: wait-postgres
+        image: busybox:1.37
+        command: ['sh', '-c', 
+          'until nc -z -w 2 {{ .Release.Name }}-postgres-rw 5432; do echo waiting for postgres; sleep 2; done'
+        ]
+      {{- end }}
+
+      {{- if .Values.redis.enabled }}
+      - name: wait-redis
+        image: busybox:1.37
+        command: ['sh', '-c', 
+          'until nc -z -w 2 {{ .Release.Name }}-redis 6379; do echo waiting for redis; sleep 2; done'
+        ]
+      {{- end }}
       containers:
       - name: shortener
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -85,18 +110,31 @@ spec:
           value: {{ .Values.cache.ttl | default "24h" | quote }}
         - name: DATABASE_TTL
           value: {{ .Values.database.ttl | default "336h" | quote }}
-        - name: AUTO_MIGRATE
-          value: {{ .Values.autoMigrate | default false | quote }}
-        - name: CONNECTION_STRING
+
+        - name: PG_PASSWORD
+          {{- if .Values.postgresql.enabled }}
           valueFrom:
             secretKeyRef:
-              {{- if .Values.postgresql.enabled }}
+              name: {{ .Release.Name }}-postgres-app
+              key: password 
+          {{- else }}
+          value: ""
+          {{- end }}
+
+        - name: CONNECTION_STRING
+          {{- if and .Values.postgresql.enabled .Values.postgresql.pooler.enabled }}
+          value: "postgres://{{ .Values.postgresql.username }}:$(PG_PASSWORD)@{{ .Release.Name }}-postgres-pooler:5432/{{ .Values.postgresql.database }}?sslmode=disable"
+          {{- else if .Values.postgresql.enabled }}
+          valueFrom:
+            secretKeyRef:
               name: {{ .Release.Name }}-postgres-app
               key: uri
-              {{- else }}
+          {{- else }}
+          valueFrom:
+            secretKeyRef:
               name: {{ .Release.Name }}-secret
               key: CONNECTION_STRING
-              {{- end }}
+          {{- end }}
         - name: MAX_CONNS
           value: {{ .Values.database.maxConns | default "25" | quote }}
         - name: MIN_CONNS
