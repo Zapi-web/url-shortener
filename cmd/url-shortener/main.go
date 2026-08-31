@@ -39,7 +39,16 @@ func run() int {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	postgresDB, err := database.NewPostgres(ctx, cfg.Database.ConnString)
+	databaseInnerConfig := database.Config{
+		MaxConns:          cfg.Database.MaxConns,
+		MinConns:          cfg.Database.MinConns,
+		MaxConnLifeTime:   cfg.Database.MaxConnLifeTime,
+		MaxConnIdleTime:   cfg.Database.MaxConnIdleTime,
+		HealthCheckPeriod: cfg.Database.HealthCheckPeriod,
+		ConnectionTimeout: cfg.Database.ConnectionTimeout,
+	}
+
+	postgresDB, err := database.NewPostgres(ctx, cfg.Database.ConnString, databaseInnerConfig)
 	if err != nil {
 		slog.Error("failed to connect to a database", "err", err)
 		return 1

@@ -27,11 +27,11 @@ shutdownTimeout: "5s"
 
 resources:
   limits:
-    cpu: 300m
+    cpu: 500m
     memory: 256Mi
   requests:
-    cpu: 20m
-    memory: 32Mi
+    cpu: 200m
+    memory: 128Mi
 
 metrics:
   enabled: true
@@ -67,15 +67,15 @@ redis:
   architecture: replication
   auth:
     enabled: true
-    password: "" # CHANGE
-  
+    password: "YourStrongPassword" # CHANGE
+
   master:
     resources:
       requests:
-        memory: "512Mi"
+        memory: "256Mi"
         cpu: "100m"
       limits:
-        memory: "1Gi"
+        memory: "512Mi"
         cpu: "500m"
     persistence:
       enabled: true
@@ -86,10 +86,10 @@ redis:
     replicaCount: 2
     resources:
       requests:
-        memory: "512Mi"
+        memory: "256Mi"
         cpu: "100m"
       limits:
-        memory: "1Gi"
+        memory: "512Mi"
         cpu: "500m"
     persistence:
       enabled: true
@@ -165,4 +165,13 @@ postgresql:
       cpu: 1000m
 
 database:
+  maxConns: 25
+  minConns: 5
+  maxConnLifetime: 1h
+  maxConnIdletime: 30m
+  healthCheckPeriod: 1m
+  connectionTimeout: 5s
+  ttl: 336h
+
+  # If use another PostgreSQL
   connectionString: ""

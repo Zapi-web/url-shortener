@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: url-shortener
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
@@ -11,7 +13,7 @@ spec:
     path: deploy/app
   destination:
     server: https://kubernetes.default.svc
-    namespace: url-shortener # или твой рабочий namespace
+    namespace: url-shortener 
   syncPolicy:
     automated:
       prune: true
