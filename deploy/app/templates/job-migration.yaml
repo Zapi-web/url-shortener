@@ -1,0 +1,66 @@
+{{- if and .Values.autoMigrate .Values.postgresql.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: {{ .Release.Name }}-migrations-files
+    namespace: {{ .Release.Namespace }}
+    labels:
+        app.kubernetes.io/name: url-shortener
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+    annotations:
+      "helm.sh/hook": post-install,pre-upgrade
+      "helm.sh/hook-weight": "-2"
+      "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+data:
+{{ (.Files.Glob "migrations/*.sql").AsConfig | indent 2 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+    name: {{ .Release.Name }}-migration
+    namespace: {{ .Release.Namespace }}
+    labels:
+        app.kubernetes.io/name: url-shortener
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+    annotations:
+        "helm.sh/hook": post-install,pre-upgrade
+        "helm.sh/hook-weight": "-1"
+        "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+    backoffLimit: 2
+    ttlSecondsAfterFinished: 300
+    template:
+        metadata:
+            labels:
+                app.kubernetes.io/name: url-shortener
+                app.kubernetes.io/instance: {{ .Release.Name }}
+                app.kubernetes.io/managed-by: {{ .Release.Service }}
+        spec:
+            restartPolicy: OnFailure
+            initContainers:
+              - name: wait-postgres
+                image: busybox:1.37
+                command: ['sh', '-c',
+                    'until nc -z -w 2 {{ .Release.Name }}-postgres-rw 5432; do echo waiting for postgres; sleep 3; done'
+                ]
+            containers:
+              - name: goose
+                image: kukymbr/goose-docker:3.26.0
+                env:
+                  - name: GOOSE_DRIVER
+                    value: "postgres"
+                  - name: GOOSE_DBSTRING
+                    valueFrom:
+                        secretKeyRef:
+                          name: {{ .Release.Name }}-postgres-app
+                          key: uri
+                volumeMounts:
+                  - name: migrations-volume
+                    mountPath: /migrations
+            volumes:
+              - name: migrations-volume
+                configMap:
+                    name: {{ .Release.Name }}-migrations-files
+{{- end }}
