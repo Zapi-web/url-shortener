@@ -48,9 +48,9 @@ spec:
           value: {{ .Values.chanBuffer | default "1000" | quote}}
         - name: APP_SHUTDOWN_TIMEOUT
           value: {{ .Values.shutdownTimeout | default "5s" | quote}}
-        - name: READ_TIMEOUT
+        - name: HTTP_READ_TIMEOUT
           value: {{ .Values.server.readTimeout | default "5s" | quote }}
-        - name: WRITE_TIMEOUT
+        - name: HTTP_WRITE_TIMEOUT
           value: {{ .Values.server.writeTimeout | default "10s" | quote }}
         - name: SERVER_SHUTDOWN_TIMEOUT
           value: {{ .Values.server.shutdownTimeout | default "3s" | quote }}
@@ -84,7 +84,7 @@ spec:
         - name: CACHE_TTL
           value: {{ .Values.cache.ttl | default "24h" | quote }}
         - name: DATABASE_TTL
-          value: {{ .Values.postgresql.ttl | default "336h" | quote }}
+          value: {{ .Values.database.ttl | default "336h" | quote }}
         - name: AUTO_MIGRATE
           value: {{ .Values.autoMigrate | default false | quote }}
         - name: CONNECTION_STRING
@@ -97,7 +97,19 @@ spec:
               name: {{ .Release.Name }}-secret
               key: CONNECTION_STRING
               {{- end }}
-        
+        - name: MAX_CONNS
+          value: {{ .Values.database.maxConns | default "25" | quote }}
+        - name: MIN_CONNS
+          value: {{ .Values.database.minConns | default "5" | quote }}
+        - name: MAX_CONN_LIFETIME
+          value: {{ .Values.database.maxConnLifetime | default "1h" | quote }}
+        - name: MAX_CONN_IDLETIME
+          value: {{ .Values.database.maxConnIdletime | default "30m" | quote }}
+        - name: HEALTH_CHECK_PERIOD
+          value: {{ .Values.database.healthCheckPeriod | default "1m" | quote }}
+        - name: CONNECTION_TIMEOUT
+          value: {{ .Values.database.connectionTimeout | default "5s" | quote }}
+
         - name: ENABLE_TRACES
           value: {{ .Values.tracer.enabled | default false | quote }}
         - name: TRACER_RATIO

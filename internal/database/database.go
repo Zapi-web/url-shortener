@@ -12,22 +12,32 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type Config struct {
+	MaxConns          int32
+	MinConns          int32
+	MaxConnLifeTime   time.Duration
+	MaxConnIdleTime   time.Duration
+	HealthCheckPeriod time.Duration
+	ConnectionTimeout time.Duration
+}
+
 type Postgres struct {
 	psql *pgxpool.Pool
 }
 
-func NewPostgres(ctx context.Context, connString string) (*Postgres, error) {
+func NewPostgres(ctx context.Context, connString string, conf Config) (*Postgres, error) {
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
-	config.MaxConns = 25
-	config.MinConns = 5
-	config.MaxConnLifetime = 1 * time.Hour
-	config.MaxConnIdleTime = 30 * time.Minute
-	config.HealthCheckPeriod = 1 * time.Minute
 
-	config.ConnConfig.ConnectTimeout = 5 * time.Second
+	config.MaxConns = conf.MaxConns
+	config.MinConns = conf.MinConns
+	config.MaxConnLifetime = conf.MaxConnLifeTime
+	config.MaxConnIdleTime = conf.MaxConnIdleTime
+	config.HealthCheckPeriod = conf.HealthCheckPeriod
+	config.ConnConfig.ConnectTimeout = conf.ConnectionTimeout
+
 	config.ConnConfig.RuntimeParams = map[string]string{
 		"application_name": "url-shortener",
 		"timezone":         "UTC",
