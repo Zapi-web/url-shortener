@@ -62,5 +62,5 @@ start-aws-k3s-cluster:
 
 	@echo "Configure servers, and deploy"
 	cd $(AN_DIR) && ansible-playbook site.yaml --private-key=$(KEY_PATH)
-aws-k3s-cluster-destroy:
+clean-aws-k3s-cluster:
 	tofu -chdir=$(TF_DIR) destroy -auto-approve
