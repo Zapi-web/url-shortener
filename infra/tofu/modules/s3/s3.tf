@@ -2,7 +2,7 @@ resource "aws_s3_bucket" "pg_backups" {
   bucket = "${var.app_name}-${var.environment}-pg-backups"
 
   lifecycle {
-    prevent_destroy = false
+    prevent_destroy = true
   }
 }
 

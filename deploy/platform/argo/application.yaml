@@ -21,3 +21,20 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+    ignoreDifferences:
+    - group: operator.victoriametrics.com
+      kind: VMPodScrape
+      jsonPointers:
+        - /metadata
+        - /spec
+    - group: operator.victoriametrics.com
+      kind: VMServiceScrape
+      jsonPointers:
+        - /metadata
+        - /spec
+    - group: postgresql.cnpg.io
+      kind: Cluster
+      jsonPointers:
+        - /spec/monitoring/customQueriesConfigMap
+        - /spec/resources/limits/cpu
+        - /spec/resources/requests/cpu

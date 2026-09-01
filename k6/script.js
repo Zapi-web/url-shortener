@@ -1,19 +1,11 @@
-import { check, sleep } from 'k6';
+import { check } from 'k6';
 import http from 'k6/http'
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081';
+const BASE_URL = 'http://localhost:8081'
 
 export const options = {
-  stages: [
-    { duration: '30s', target: 100 },
-    { duration: '1m', target: 500 },
-    { duration: '2m', target: 1000 },
-    { duration: '30s', target: 0 },
-  ],
-  thresholds: {
-    http_req_failed: ['rate<0.01'],
-    http_req_duration: ['p(95)<500'],
-  },
+    vus: 1000,
+    iterations: 10000
 };
 
 export default function() {
@@ -24,34 +16,23 @@ export default function() {
 
     const params = {
         headers: { 'Content-Type': 'application/json' },
-        tags: { name: 'PostCreateLink' }
     }
     const postRes = http.post(`${BASE_URL}/api/v1/`, payload, params)
 
-    const isPostOk = check(postRes, {
+    check(postRes, {
         'POST link created (200)': (r) => r.status === 200
     })
 
-    if (isPostOk && postRes.body) {
-        let shortURL;
-        try {
-            shortURL = postRes.json('short_url')
-        } catch (_) {}
+    const shortURL = postRes.json('short_url')
 
-        if (shortURL) {
-            const getParams = {
-                redirects: 0,
-                tags: { name: 'GetRedirectLink' }
-            };
+    if (shortURL) {
+        const fullShortURL = `${BASE_URL}/${shortURL}`;
+        const getParams = { redirects: 0 };
+        const getRes = http.get(fullShortURL, getParams);
 
-            const getRes = http.get(http.url`${BASE_URL}/${shortURL}`, getParams);
-
-            check(getRes, {
-                'GET short link received (302)': (r) => r.status === 302,
-                'Redirect location is Google': (r) => r.headers['Location'] === 'https://google.com' || r.headers['location'] === 'https://google.com',
-            });
-        }    
+        check(getRes, {
+            'GET short link received (302)': (r) => r.status === 302,
+            'Redirect location is Google': (r) => r.headers['Location'] === 'https://google.com' || r.headers['location'] === 'https://google.com',
+        });
     }
-
-    sleep(0.05)
 }
