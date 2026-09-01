@@ -1,3 +1,9 @@
+KEY_PATH ?= ~/.ssh/serhii-aws-key.pem
+TF_DIR = infra/tofu
+AN_DIR = infra/ansible
+
+export ANSIBLE_HOST_KEY_CHECKING=False
+
 start-local-compose:
 	docker compose up --build
 clean-compose:
@@ -47,3 +53,14 @@ upgrade-local-k3d:
 
 	@echo "Deploy App"
 	helm upgrade --install url-shortener ./deploy/app -f ./deploy/app/values.yaml --create-namespace --namespace app
+start-aws-k3s-cluster:
+	@echo "Make an infrastructure with OpenTofu"
+	tofu -chdir=$(TF_DIR) apply -auto-approve
+
+	@echo "Ping all servers"
+	cd $(AN_DIR) && ansible all -m ping --private-key=$(KEY_PATH)
+
+	@echo "Configure servers, and deploy"
+	cd $(AN_DIR) && ansible-playbook site.yaml --private-key=$(KEY_PATH)
+aws-k3s-cluster-destroy:
+	tofu -chdir=$(TF_DIR) destroy -auto-approve

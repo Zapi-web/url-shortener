@@ -8,6 +8,8 @@ metadata:
         app.kubernetes.io/name: url-shortener
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/managed-by: {{ .Release.Service }}
+    annotations:
+      argocd.argoproj.io/sync-wave: "3"
 spec:
     scaleTargetRef:
         apiVersion: apps/v1
