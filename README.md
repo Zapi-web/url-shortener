@@ -20,7 +20,7 @@ An app example written by myself: a **URL-shortener** that automatically generat
 * **PostgreSQL Storage**: Indexed on `expired_at` for efficient database cleanup routines.
 * **Observability**: Built-in VictoriaMetrics integration tracking request counts, latencies, and cache stats.
 * **12-Factor App**: Gives the opportunity to customize almost all parameters in the app
-* **Cache WaitGroup**: async adding to cache through the `WaitGroup` pattern in Go code
+* **Cache WaitGroup**: async adding to cache through the `Worker Pool` pattern in Go code
 
 ## Tech Stack
 * **Go 1.26+**
