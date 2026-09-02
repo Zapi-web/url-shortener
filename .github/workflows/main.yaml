@@ -1,26 +1,29 @@
 name: Main Pipeline
 
 on:
-    push:
-        branches: [ main ]
-        paths-ignore:
-            - README.md
-            - LICENSE
-    pull_request:
-        branches: [ main ]
-        paths-ignore:
-            - README.md
-            - LICENSE
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - LICENSE
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - LICENSE
 
 jobs:
     go-tests:
         uses: ./.github/workflows/go.yaml
     tf-linting:
         uses: ./.github/workflows/tofu.yaml
+    e2e-testing:
+        uses: ./.github/workflows/e2e.yaml
+        needs: go-tests
 
     docker-registry-push:
         uses: ./.github/workflows/docker.yaml
-        needs: go-tests
+        needs: [go-tests, tf-linting, e2e-testing]
         if: github.event_name == 'push'
         secrets: inherit
         permissions:

@@ -1,0 +1,32 @@
+name: E2E
+
+on:
+    workflow_call:
+
+jobs:
+    Test:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v6
+
+        - name: Start compose up
+          run: docker compose up --wait -d --build
+
+        - name: Wait for Go service to be ready
+          run: |
+            for i in {1..10}; do
+              if curl -f -s http://localhost:8080/healthz > /dev/null; then
+                exit 0
+              fi
+              echo "Waiting for the app"
+              sleep 2
+            done
+            echo "Error: Timeout to start service"
+            docker compose logs
+            exit 1
+        
+        - name: Start test script
+          run: bash ./test/test_script.sh http://localhost:8080
+
+        - name: Cleanup containers
+          run: docker compose down -v --remove-orphans
