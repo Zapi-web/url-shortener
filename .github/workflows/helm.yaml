@@ -23,23 +23,14 @@ jobs:
           python-version: '3.x'
           check-latest: true
       
-      - name: Set up chart-testing
-        uses: helm/chart-testing-action@v2.8.0
-      
       - name: Build chart dependencies
         run: helm dependency build deploy/app
-        
-      - name: Run chart-testing (list-changed)
-        id: list-changed
-        run: |
-          changed=$(ct list-changed --target-branch ${{ github.event.repository.default_branch }})
-          if [[ -n "$changed" ]]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
 
-      - name: Run chart-testing (lint)
-        if: steps.list-changed.outputs.changed == 'true'
-        run: ct lint --target-branch ${{ github.event.repository.default_branch }}
+      - name: Lint Helm Chart
+        run: helm lint deploy/app
+
+      - name: Dry-run template render
+        run: helm template test-release deploy/app > /dev/null
   push:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -56,6 +47,9 @@ jobs:
       - name: Login to Github Packages
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Dependencies
+        run: helm dependency build deploy/app
 
       - name: Package and Push Helm Chart
         run: |
