@@ -29,3 +29,11 @@ jobs:
         permissions:
             contents: read
             packages: write
+
+    helm-pipeline:
+        uses: ./.github/workflows/helm.yaml
+        needs: [go-tests, tf-linting, e2e-testing]
+        secrets: inherit
+        permissions:
+            contents: read
+            packages: write
