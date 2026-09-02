@@ -87,6 +87,18 @@ make clean-aws-k3s-cluster
 
 **P.S.** If you deployed to the cloud, replace **localhost:8080** with your ALB link
 
+### Installation on working cluster
+
+1. Create or modify your local values.yaml in `deploy/app/values.yaml` (AWARE TO TURN OFF ALL REQUIREMENTS THAT YOU DONT HAVE)
+
+2. Install the Chart via OCI Registry
+```bash
+helm install url-shortener oci://ghcr.io/zapi-web/charts/url-shortener \
+  --version 0.1.0 \
+  -f deploy/app/values.yaml \
+  --namespace YOUR_NAMESPACE
+```
+
 ## Performance & Benchmarks (k6)
 
 Tested on an AWS k3s Cluster (3 nodes) with **1,000 concurrent VUs** over 5 minutes:
